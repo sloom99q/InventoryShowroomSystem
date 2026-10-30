@@ -3,7 +3,9 @@ import { login } from './helpers'
 
 test('Arabic: right-to-left layout, chassis stays left-to-right, choice is remembered', async ({ page }) => {
   await login(page)
+  const saved = page.waitForResponse(/set_my_locale/)
   await page.getByRole('button', { name: 'العربية' }).click()
+  await saved
   await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
   const vehiclesLink = page.locator('aside nav a[href="/vehicles"]')
   await expect(vehiclesLink).toHaveText('السيارات')

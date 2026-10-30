@@ -36,6 +36,13 @@ export type FieldChoice =
   | { kind: 'keep' }
   | null
 
+const MONTH_NAME = new RegExp(
+  '\\b(jan(uary)?|feb(ruary)?|mar(ch)?|apr(il)?|may|june?|july?|aug(ust)?|sep(t(ember)?)?|oct(ober)?|nov(ember)?|dec(ember)?)\\b' +
+    '|يناير|فبراير|مارس|أبريل|ابريل|مايو|يونيو|يوليو|أغسطس|اغسطس|سبتمبر|أكتوبر|اكتوبر|نوفمبر|ديسمبر' +
+    '|كانون|شباط|آذار|نيسان|أيار|حزيران|تموز|آب|أيلول|تشرين',
+  'i',
+)
+
 /** Turn a document value into what the database column accepts, or null if it can't be. */
 export function coerce(field: EditableField, value: string): string | null {
   const v = value.trim()
@@ -44,6 +51,7 @@ export function coerce(field: EditableField, value: string): string | null {
     case 'year': {
       // A full date is a document date, never a model year.
       if (/\d{1,4}\s*[/.-]\s*\d{1,2}\s*[/.-]\s*\d{1,4}/.test(v)) return null
+      if (MONTH_NAME.test(v) && /\b\d{1,2}\b/.test(v.replace(/\b(19|20)\d{2}\b/, ''))) return null
       const m = v.match(/\b(19|20)\d{2}\b/)
       return m ? m[0] : null
     }

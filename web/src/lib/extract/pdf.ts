@@ -2,6 +2,7 @@
 import { findCandidates } from '@/lib/vin'
 import { isDocumentHeading, parseTitle } from './core'
 import { norm, pageLines, type Line, type TextItem } from './layout'
+import { applyLigatureFixes, glyphRuns, ligatureFixesFromRuns } from './ligatures'
 import { structure } from './structure'
 import type { Extraction, Fact, ImageCandidate } from './types'
 
@@ -65,6 +66,11 @@ export async function extractPdf(data: Uint8Array, pdfjs: PdfJs, fileKey = 'file
     const imageOnlyPages: number[] = []
     for (let p = 1; p <= doc.numPages; p++) {
       const lines = pageLines(await pageItems(doc, p))
+      const fixes = ligatureFixesFromRuns(glyphRuns(await (await doc.getPage(p)).getOperatorList(), pdfjs.OPS as unknown as Record<string, number>))
+      if (fixes.size) for (const l of lines) {
+        l.text = applyLigatureFixes(l.text, fixes)
+        l.cells = l.cells.map((c) => applyLigatureFixes(c, fixes))
+      }
       all.push(...lines)
       const text = lines.map((l) => l.text).join('\n')
       pages.push(text)

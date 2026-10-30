@@ -30,7 +30,7 @@ export default function App() {
             <Route index element={<Dashboard />} />
             <Route path="vehicles" element={<Vehicles />} />
             <Route path="vehicles/new" element={<VehicleNew />} />
-            <Route path="vehicles/import" element={<ImportFiles />} />
+            <Route path="vehicles/import" element={<Navigate to="/vehicles/new?mode=documents" replace />} />
             <Route path="vehicles/:id" element={<VehicleDetail />} />
             <Route path="vehicles/:id/import" element={<ImportFiles key="existing" />} />
             <Route path="documents" element={<Documents />} />

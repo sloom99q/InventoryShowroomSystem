@@ -42,8 +42,27 @@ const INDEX = new Map<string, CoreField>()
 for (const [field, words] of Object.entries(SYNONYMS)) for (const w of words) INDEX.set(normLabel(w), field as CoreField)
 
 /** The field a label names, ignoring its value. */
+/**
+ * Look a label up as written, then without bracketed notes ("Mileage (km)",
+ * "Chassis No. (VIN)"), then by what's inside the brackets.
+ */
+function lookup(label: string): CoreField | null {
+  const direct = INDEX.get(normLabel(label))
+  if (direct) return direct
+  const outside = label.replace(/[([{（][^)\]}）]*[)\]}）]/g, ' ')
+  if (outside !== label) {
+    const f = INDEX.get(normLabel(outside))
+    if (f) return f
+    for (const m of label.matchAll(/[([{（]([^)\]}）]*)[)\]}）]/g)) {
+      const g = INDEX.get(normLabel(m[1]))
+      if (g) return g
+    }
+  }
+  return null
+}
+
 export function labelField(label: string): CoreField | null {
-  return INDEX.get(normLabel(label)) ?? null
+  return lookup(label)
 }
 
 /** A day-month-year or year-month-day date (not a bare year). */
@@ -52,7 +71,7 @@ const YEAR = /^(19|20)\d{2}$/
 
 /** Core field for a label/value pair, applying the year/date rules. */
 export function coreFor(label: string, value: string): CoreField | null {
-  const f = INDEX.get(normLabel(label)) ?? null
+  const f = lookup(label)
   if (!f) return null
   const v = norm(value)
   if (f === 'year') {
@@ -115,7 +134,9 @@ const DOC_WORDS = new Set(
   [
     'technical', 'specification', 'specifications', 'spec', 'specs', 'sheet', 'data', 'datasheet', 'brochure', 'catalogue', 'catalog',
     'price', 'list', 'pricelist', 'summary', 'overview', 'details', 'vehicle', 'information', 'info', 'features', 'equipment', 'quotation',
-    'quote', 'invoice', 'report', 'inspection', 'certificate', 'document', 'and', 'of', 'the', 'مواصفات', 'المواصفات', 'الفنيه', 'فنيه',
+    'quote', 'invoice', 'report', 'inspection', 'certificate', 'document', 'export', 'import', 'registration', 'customs',
+    'clearance', 'ownership', 'transfer', 'purchase', 'sale', 'sales', 'agreement', 'contract', 'receipt', 'delivery', 'note', 'form',
+    'and', 'of', 'the', 'تصدير', 'استيراد', 'تسجيل', 'جمارك', 'ملكيه', 'نقل', 'شراء', 'بيع', 'عقد', 'ايصال', 'تسليم', 'نموذج', 'مواصفات', 'المواصفات', 'الفنيه', 'فنيه',
     'كتيب', 'قائمه', 'الاسعار', 'اسعار', 'ملخص', 'معلومات', 'السياره', 'سياره', 'المميزات', 'عرض', 'سعر', 'فاتوره', 'تقرير', 'شهاده', 'و',
   ].map((w) => normLabel(w)),
 )

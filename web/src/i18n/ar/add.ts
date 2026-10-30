@@ -2,6 +2,12 @@ import type { Messages } from '../types'
 import type en from '../en/add'
 
 const ar: Messages<typeof en> = {
+  mode: {
+    documents: 'من المستندات',
+    documentsHint: 'أضف الكتيّب أو ورقة المواصفات أو ملف Excel أو الصور، وتُقرأ البيانات لتراجعها.',
+    manual: 'إدخال يدوي',
+    manualHint: 'اكتب رقم الشاصي والبيانات بنفسك.',
+  },
   title: 'إضافة سيارة',
   intro: 'رقم الشاصي هو الحقل الوحيد المطلوب. يمكن إضافة الباقي لاحقاً.',
   sections: {

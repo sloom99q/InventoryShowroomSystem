@@ -13,7 +13,7 @@ import { Chassis, StatusBadge, VehicleThumb, vehicleTitle } from '@/components/v
 import { useCompany } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 import { detectKind, extractFile, mergeFacts } from '@/lib/extract/index'
-import { suggestName } from '@/lib/extract/core'
+import { isDocumentHeading, suggestName } from '@/lib/extract/core'
 import type { SourceRef } from '@/lib/extract/types'
 import { makeThumbnail, MAX_FILE_BYTES, uploadObject } from '@/lib/files'
 import { friendlyError, supabase } from '@/lib/supabase'
@@ -30,7 +30,8 @@ type Target = { mode: 'existing'; id: string } | { mode: 'new' } | null
 
 const ACCEPT = '.pdf,.docx,.xlsx,.xls,.csv,image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf'
 
-export default function ImportFiles() {
+/** embedded = shown inside "Add vehicle": no page header, and files default to a new vehicle. */
+export default function ImportFiles({ embedded = false }: { embedded?: boolean }) {
   const { t } = useTranslation(['docimport', 'common'])
   const { company, canWrite } = useCompany()
   const { id: routeId } = useParams<{ id: string }>()
@@ -95,7 +96,7 @@ export default function ImportFiles() {
 
   // ---- Vehicle field candidates -----------------------------------------------
   const cands = useMemo(() => {
-    const titles = ready.filter((f) => f.extraction!.title).map((f) => ({ name: f.extraction!.title!, source: { fileKey: f.key, page: f.kind === 'pdf' ? 1 : null } }))
+    const titles = ready.filter((f) => f.extraction!.title && !isDocumentHeading(f.extraction!.title)).map((f) => ({ name: f.extraction!.title!, source: { fileKey: f.key, page: f.kind === 'pdf' ? 1 : null } }))
     const c = buildCandidates(merged, titles, (n) => suggestName(n, knownBrands))
     // Chassis numbers spotted in the text (not under a label) are offered too.
     for (const f of ready) for (const cc of f.extraction!.chassisCandidates) {
@@ -126,10 +127,11 @@ export default function ImportFiles() {
     enabled: docChassis.length > 0,
     queryFn: async () => Promise.all(docChassis.map(async (c) => ({ chassis: c, vehicle: await findByChassis(c) }))),
   })
-  if (!autoTargeted && !reading && files.length && match.data && !target) {
+  if (!autoTargeted && !reading && files.length && (match.data || docChassis.length === 0) && !target) {
     setAutoTargeted(true)
-    const found = match.data.filter((m) => m.vehicle)
+    const found = (match.data ?? []).filter((m) => m.vehicle)
     if (docChassis.length === 1 && found.length === 1) setTarget({ mode: 'existing', id: found[0].vehicle!.id })
+    else if (embedded) setTarget({ mode: 'new' })
   }
 
   // ---- Wrong-car check ---------------------------------------------------------
@@ -244,7 +246,7 @@ export default function ImportFiles() {
 
   return (
     <div className="pb-24">
-      <PageHeader title={t('title')} description={t('subtitle')} />
+      {!embedded && <PageHeader title={t('title')} description={t('subtitle')} />}
 
       <TargetBar target={target} setTarget={(tg) => { setTarget(tg); setChoiceOverride({}); setWrongCarOk(false) }} picking={picking} setPicking={setPicking} vehicle={vehicle.data} />
 

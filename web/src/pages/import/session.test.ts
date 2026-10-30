@@ -60,6 +60,9 @@ describe('field coercion', () => {
     expect(coerce('year', 'TBA')).toBeNull()
     expect(coerce('year', '14/03/2029')).toBeNull()
     expect(coerce('year', '2029-03-14')).toBeNull()
+    expect(coerce('year', '19 October 2026')).toBeNull()
+    expect(coerce('year', '19 أكتوبر 2026')).toBeNull()
+    expect(coerce('year', 'October 2026')).toBe('2026')
   })
   it('reads prices and mileage as exact numbers', () => {
     expect(coerce('listing_price', 'AED 1,234,500')).toBe('1234500.00')

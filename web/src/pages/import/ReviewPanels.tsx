@@ -66,7 +66,7 @@ export function CoreFieldsPanel({ cands, choices, setChoice, current, isNew, fil
               <div className="space-y-1.5">
                 {list.map((c, i) => (
                   <label key={i} className={cn('flex cursor-pointer flex-wrap items-center gap-x-2 gap-y-1 rounded-md border px-2.5 py-1.5 text-[13.5px]',
-                    choice?.kind === 'candidate' && choice.index === i ? 'border-accent bg-accent/5' : 'border-line-soft hover:bg-raised', c.invalid && 'opacity-70')}>
+                    choice?.kind === 'candidate' && choice.index === i ? 'border-ink-2 bg-raised' : 'border-line-soft hover:bg-raised', c.invalid && 'opacity-70')}>
                     <input type="radio" name={`f-${f}`} checked={choice?.kind === 'candidate' && choice.index === i} disabled={c.invalid}
                       onChange={() => setChoice(f, { kind: 'candidate', index: i })} />
                     {isChassis ? <Chassis value={c.value} /> : <span className="font-medium" dir="auto">{c.value}</span>}
@@ -75,14 +75,14 @@ export function CoreFieldsPanel({ cands, choices, setChoice, current, isNew, fil
                     <SourceChips sources={c.sources} files={files} onShow={onShow} />
                   </label>
                 ))}
-                <label className={cn('flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-[13.5px]', choice?.kind === 'keep' ? 'border-accent bg-accent/5' : 'border-line-soft hover:bg-raised')}>
+                <label className={cn('flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-[13.5px]', choice?.kind === 'keep' ? 'border-ink-2 bg-raised' : 'border-line-soft hover:bg-raised')}>
                   <input type="radio" name={`f-${f}`} checked={choice?.kind === 'keep'} onChange={() => setChoice(f, { kind: 'keep' })} />
                   {isNew
                     ? <span className="text-ink-2">{t('review.leaveEmpty')}</span>
                     : <span className="text-ink-2">{t('review.keepCurrent')}: {cur ? (isChassis ? <Chassis value={cur} className="text-ink" /> : <b className="font-medium text-ink" dir="auto">{cur}</b>) : t('review.empty')}</span>}
                 </label>
                 {!(isChassis && !isNew) && (
-                  <div className={cn('rounded-md border px-2.5 py-1.5', choice?.kind === 'custom' ? 'border-accent bg-accent/5' : 'border-line-soft')}>
+                  <div className={cn('rounded-md border px-2.5 py-1.5', choice?.kind === 'custom' ? 'border-ink-2 bg-raised' : 'border-line-soft')}>
                     <label className="flex cursor-pointer items-center gap-2 text-[13px] text-ink-2">
                       <input type="radio" name={`f-${f}`} checked={choice?.kind === 'custom'} onChange={() => setChoice(f, { kind: 'custom', text: choice?.kind === 'custom' ? choice.text : '' })} />
                       {t('review.typeValue')}
@@ -164,7 +164,7 @@ export function SpecsPanel({ facts, decisions, setDecision, items, setItem, file
                     <div className="mt-2 space-y-1 ps-6">
                       <p className="flex items-center gap-1 text-[12px] text-warn"><AlertTriangle className="size-3.5" />{t('review.conflict')}</p>
                       {m.values.map((v, vi) => (
-                        <label key={vi} className={cn('flex cursor-pointer flex-wrap items-center gap-2 rounded-md border px-2.5 py-1.5', d?.include && d.valueIndex === vi && d.custom === null ? 'border-accent bg-accent/5' : 'border-line-soft hover:bg-raised')}>
+                        <label key={vi} className={cn('flex cursor-pointer flex-wrap items-center gap-2 rounded-md border px-2.5 py-1.5', d?.include && d.valueIndex === vi && d.custom === null ? 'border-ink-2 bg-raised' : 'border-line-soft hover:bg-raised')}>
                           <input type="radio" name={`s-${m.id}`} checked={!!d?.include && d.valueIndex === vi && d.custom === null}
                             onChange={() => setDecision(m.id, { include: true, valueIndex: vi, custom: null, unit: v.unit })} />
                           <span className="font-medium" dir="auto">{v.value}{v.unit && <span className="ms-1 font-normal text-ink-2">{v.unit}</span>}</span>

@@ -8,6 +8,7 @@ test('secretary workflow: add, document, photos, expenses, sell, find', async ({
 
   // Add vehicle with only the chassis + a few details.
   await page.getByRole('link', { name: 'Add vehicle' }).first().click()
+  await page.getByRole('tab', { name: /Enter manually/ }).click()
   await page.getByPlaceholder('LVVDB21B9PD012345').fill(chassis)
   await page.getByLabel('Brand').fill('Zeekr')
   await page.getByLabel('Model').fill('001 FR')
@@ -21,7 +22,7 @@ test('secretary workflow: add, document, photos, expenses, sell, find', async ({
   await page.screenshot({ path: 'e2e/screens/vehicle.png', fullPage: true })
 
   // Duplicate chassis is blocked on the add form.
-  await page.goto('/vehicles/new')
+  await page.goto('/vehicles/new?mode=manual')
   await page.getByPlaceholder('LVVDB21B9PD012345').fill(chassis.toLowerCase().replace(/(.{3})/, '$1-'))
   await expect(page.getByText('This chassis is already registered')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Save vehicle' })).toBeDisabled()
@@ -70,12 +71,16 @@ test('secretary workflow: add, document, photos, expenses, sell, find', async ({
   await expect(page).toHaveURL(/\/vehicles\//)
 })
 
-test('reads the chassis number from a digital PDF', async ({ page }) => {
+test('reads the chassis number from a digital PDF (Add vehicle → From documents)', async ({ page }) => {
   await login(page)
-  await page.goto('/vehicles/new')
-  await page.locator('input[type=file][accept="application/pdf,image/*"]').setInputFiles(path.join(FIXTURES, 'a_digital_certificate.pdf'))
-  await expect(page.getByPlaceholder('LVVDB21B9PD012345')).toHaveValue('1GNSKCKD7PR123456')
-  await expect(page.getByLabel('Brand')).toHaveValue('Chevrolet')
+  await page.getByRole('link', { name: 'Add vehicle' }).first().click()
+  await expect(page.getByRole('tab', { name: /Enter manually/ })).toHaveAttribute('aria-selected', 'true')
+  await page.getByRole('tab', { name: /From documents/ }).click()
+  await page.locator('input[type=file][multiple]').setInputFiles(path.join(FIXTURES, 'a_digital_certificate.pdf'))
+  const chassis = page.locator('fieldset[data-field=chassis_number]')
+  await expect(chassis.locator('input[type=radio]:checked')).toHaveCount(1, { timeout: 20_000 })
+  await expect(chassis).toContainText('1GNSKCKD7PR123456')
+  await expect(page.locator('fieldset[data-field=brand]')).toContainText('Chevrolet')
   await page.screenshot({ path: 'e2e/screens/add-from-pdf.png', fullPage: true })
 })
 

@@ -1,5 +1,11 @@
 // Add-vehicle flow: form sections, chassis input, PDF reader, photo picker.
 export default {
+  mode: {
+    documents: 'From documents',
+    documentsHint: 'Drop the brochure, spec sheet, Excel or photos. The details are read for you to check.',
+    manual: 'Enter manually',
+    manualHint: 'Type the chassis number and details yourself.',
+  },
   title: 'Add vehicle',
   intro: 'Only the chassis number is required. Everything else can be added later.',
   sections: {

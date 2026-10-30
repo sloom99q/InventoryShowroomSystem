@@ -1,24 +1,26 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { FileStack, Keyboard } from 'lucide-react'
 import { toast } from 'sonner'
 import { useCreateVehicle } from '@/api/vehicles'
 import { ChassisInput, useChassisBlocked } from '@/components/ChassisInput'
-import { PdfReader, type PdfReadResult } from '@/components/PdfReader'
 import { PhotoPicker } from '@/components/PhotoPicker'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 import { Field, Input, Select } from '@/components/ui/form'
-import { Panel } from '@/components/ui/misc'
+import { PageLoader, Panel } from '@/components/ui/misc'
+import { cn } from '@/lib/cn'
+
+const ImportFiles = lazy(() => import('@/pages/import/ImportFiles'))
 import { fromForm, VehicleFields, vehicleSchema, type VehicleForm } from '@/components/VehicleFields'
 import { useCompany } from '@/lib/auth'
 import { nowLocalInput } from '@/lib/format'
 import { ITEM_STATUS_LABEL } from '@/lib/labels'
-import { objectPath, uploadImage, uploadObject, validateFile } from '@/lib/files'
+import { uploadImage } from '@/lib/files'
 import { friendlyError, supabase } from '@/lib/supabase'
 import type { ItemStatus } from '@/lib/types'
-import { checkChassis } from '@/lib/vin'
 
 type Kit = { physical: string; smart: string; nfc: string; charger: ItemStatus | ''; chargerType: string }
 
@@ -37,30 +39,20 @@ function Section({ n, title, hint, children }: { n: number; title: string; hint?
   )
 }
 
-export function VehicleNew() {
-  const { t } = useTranslation(['add', 'common', 'docimport'])
+/** Manual entry: the chassis number is the only required field. */
+export function ManualVehicleForm() {
+  const { t } = useTranslation(['add', 'common'])
   const { company } = useCompany()
   const nav = useNavigate()
   const create = useCreateVehicle()
   const [chassis, setChassis] = useState('')
   const [verified, setVerified] = useState(false)
-  const [pdf, setPdf] = useState<PdfReadResult | null>(null)
   const [photos, setPhotos] = useState<File[]>([])
   const [card, setCard] = useState<File[]>([])
   const [kit, setKit] = useState<Kit>({ physical: '', smart: '', nfc: '', charger: '', chargerType: '' })
   const [saving, setSaving] = useState<string | null>(null)
   const form = useForm<VehicleForm>({ resolver: zodResolver(vehicleSchema), defaultValues: { arrival_at: nowLocalInput() } })
   const blocked = useChassisBlocked(chassis)
-  const check = checkChassis(chassis)
-
-  function onPdfRead(r: PdfReadResult | null) {
-    setPdf(r)
-    if (!r) return
-    for (const [k, v] of Object.entries(r.fields)) {
-      const key = k as keyof VehicleForm
-      if (!form.getValues(key)) form.setValue(key, v, { shouldDirty: true })
-    }
-  }
 
   async function save(values: VehicleForm) {
     if (!chassis || blocked) return
@@ -69,20 +61,6 @@ export function VehicleNew() {
       const v = await create.mutateAsync({ ...fromForm(values), chassis_number: chassis.trim(), chassis_verified: verified })
       const problems: string[] = []
       // Follow-up uploads. A failure here never loses the vehicle record.
-      if (pdf) {
-        setSaving(t('progress.document'))
-        try {
-          const s = await validateFile(pdf.file, 'pdf_or_image')
-          const path = objectPath(company.id, v.id, 'documents', s.ext)
-          await uploadObject(path, pdf.file, s.mime)
-          const { error } = await supabase.from('documents').insert({
-            vehicle_id: v.id, document_type: 'vehicle_pdf', original_filename: pdf.file.name, storage_path: path,
-            mime_type: s.mime, file_size: pdf.file.size, extracted_text: pdf.text,
-            verification_status: verified ? 'verified' : 'unverified',
-          })
-          if (error) throw error
-        } catch (e) { problems.push(t('problems.document', { error: friendlyError(e) })) }
-      }
       for (const [i, f] of photos.entries()) {
         setSaving(t('progress.photo', { n: i + 1, total: photos.length }))
         try {
@@ -126,23 +104,14 @@ export function VehicleNew() {
 
   return (
     <form onSubmit={form.handleSubmit(save)} className="mx-auto max-w-4xl space-y-4 pb-24">
-      <div className="mb-2 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-[22px] font-semibold">{t('title')}</h1>
-          <p className="mt-1 text-[13.5px] text-ink-2">{t('intro')}</p>
-        </div>
-        <Link to="/vehicles/import" className={buttonVariants()}>{t('docimport:fromFiles')}</Link>
-      </div>
+      <p className="text-[13.5px] text-ink-2">{t('intro')}</p>
 
       <Section n={1} title={t('sections.chassis')} hint={t('sections.chassisHint')}>
         <ChassisInput value={chassis} onChange={(v) => { setChassis(v); setVerified(false) }} autoFocus />
-        <div className="mt-4">
-          <PdfReader onRead={onPdfRead} picked={check.normalized} onPick={(c) => { setChassis(c.value); setVerified(false) }} />
-        </div>
         {chassis && !blocked && (
           <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-[13.5px]">
             <input type="checkbox" checked={verified} onChange={(e) => setVerified(e.target.checked)} className="mt-0.5 size-4" />
-            <span>{pdf ? t('verifiedCheckShown') : t('verifiedCheck')}</span>
+            <span>{t('verifiedCheck')}</span>
           </label>
         )}
       </Section>
@@ -195,5 +164,40 @@ export function VehicleNew() {
         </div>
       </div>
     </form>
+  )
+}
+
+/** "Add vehicle": read it from the car's documents, or type it in. */
+export function VehicleNew() {
+  const { t } = useTranslation('add')
+  const [params, setParams] = useSearchParams()
+  const mode = params.get('mode') === 'documents' ? 'documents' : 'manual'
+  const options = [
+    { value: 'manual', icon: Keyboard, title: t('mode.manual'), hint: t('mode.manualHint') },
+    { value: 'documents', icon: FileStack, title: t('mode.documents'), hint: t('mode.documentsHint') },
+  ] as const
+  return (
+    <>
+      <h1 className="mb-4 text-[24px] font-semibold">{t('title')}</h1>
+      <div role="tablist" aria-label={t('title')} className="mb-6 grid gap-3 sm:grid-cols-2">
+        {options.map((o) => (
+          <button key={o.value} role="tab" aria-selected={mode === o.value}
+            onClick={() => setParams(o.value === 'documents' ? { mode: 'documents' } : {}, { replace: true })}
+            className={cn('flex cursor-pointer items-start gap-3 rounded-lg border bg-surface p-4 text-start transition-colors',
+              mode === o.value ? 'border-accent ring-1 ring-accent' : 'border-line-soft hover:border-line')}>
+            <span className={cn('flex size-10 shrink-0 items-center justify-center rounded-md', mode === o.value ? 'bg-accent text-accent-ink' : 'bg-raised text-ink-2')}>
+              <o.icon className="size-5" aria-hidden />
+            </span>
+            <span>
+              <span className="block text-[15px] font-semibold">{o.title}</span>
+              <span className="mt-0.5 block text-[13px] text-ink-2">{o.hint}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      {mode === 'manual' ? <ManualVehicleForm /> : (
+        <Suspense fallback={<PageLoader />}><ImportFiles embedded /></Suspense>
+      )}
+    </>
   )
 }

@@ -14,9 +14,8 @@ test('imports four mixed-format files for one new car, with conflicts, Arabic an
   await expect(page.getByText(/details found/)).toHaveCount(4, { timeout: 30_000 })
   await expect(page.getByRole('button', { name: /Save to vehicle|Create vehicle/ })).toBeDisabled()
 
-  // No chassis in any file: the secretary chooses the target.
-  await expect(page.getByText('Choose the vehicle these files belong to')).toBeVisible()
-  await page.getByRole('button', { name: 'New vehicle' }).click()
+  // No chassis in any file and we came from "Add vehicle": it starts as a new vehicle (switchable).
+  await expect(page.getByText('New vehicle').first()).toBeVisible()
 
   // The conflicting value is shown, not resolved.
   const conflict = page.locator('li', { hasText: 'The files disagree' }).first()
