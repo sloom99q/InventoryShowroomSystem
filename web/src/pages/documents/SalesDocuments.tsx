@@ -176,6 +176,14 @@ export default function SalesDocuments() {
             el.classList.add('ring-2', 'ring-warn')
             setTimeout(() => el.classList.remove('ring-2', 'ring-warn'), 1600)
           }} />
+          {kind === 'specsheet' && (
+            <Panel className="p-4">
+              <label className="block text-[13px] font-medium text-ink-2" htmlFor="doc-date">{t('choose.docDate')}</label>
+              <Input id="doc-date" type="date" dir="ltr" className="mt-1.5 w-48" value={settings.docDate ?? ''}
+                onChange={(e) => change({ ...settings, docDate: e.target.value || undefined })} />
+              <p className="mt-1 text-[12px] text-ink-3">{t('choose.docDateHint')}</p>
+            </Panel>
+          )}
           {kind === 'brochure' && <BrochureChoices images={images} settings={settings} change={change} sizes={sizes} />}
           <button className="text-[12.5px] text-ink-3 underline hover:text-ink" onClick={() => nav(`/vehicles/${id}`)}>{t('editSpecs')}</button>
         </div>

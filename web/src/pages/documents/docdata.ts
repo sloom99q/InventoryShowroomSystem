@@ -13,7 +13,7 @@ export type CompanyLike = Pick<T['companies']['Row'], 'name' | 'legal_name' | 's
 export type DocKind = 'specsheet' | 'brochure'
 
 /** Saved per vehicle: only the brochure photos are chosen by hand. Rows and sections come from fields.json. */
-export type DocSettings = { brochure?: { coverId?: string | null; photoIds?: string[] } }
+export type DocSettings = { brochure?: { coverId?: string | null; photoIds?: string[] }; /** yyyy-mm-dd printed on the spec sheet; default: today. */ docDate?: string }
 
 export function readSettings(v: Pick<VehicleLike, 'doc_settings'>): DocSettings {
   const s = v.doc_settings
@@ -56,7 +56,7 @@ export function toDocData(
   }
   const list = (k: string) => (data.lists[k] ?? []).map((r) => bi(r.value_en, r.value_ar)).filter((x) => x.en || x.ar)
   return {
-    doc_date: docDate(now),
+    doc_date: readSettings(v).docDate || docDate(now),
     identity: {
       brand: (v.brand ?? '').toUpperCase(),
       model: (v.model ?? '').toUpperCase(),

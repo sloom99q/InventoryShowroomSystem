@@ -85,6 +85,17 @@ PDFs use it (app copy: `web/src/lib/fields/fields.json`; a test keeps them ident
   versioned "Brochure" document), audited. Inspection blocks on missing brand/model/year, a spec sheet
   over one page or an overflowing brochure slide; warns on no price, empty fields, missing Arabic, < 3 photos.
 
+### Try it with the kit's sample car
+
+```sh
+cd web
+SUPABASE_SERVICE_ROLE_KEY=... node scripts/seed-sample-car.mjs "SinoLink Motors"   # Valtren Orisa X5, photos, assets
+node scripts/verify-sample-export.mjs ../verify-out   # opens it in the running app, exports both PDFs, runs compare.py
+```
+The seed sets the car's document date to the sample's (2 November 2026) so the export can be compared
+with `kit/reference`; on real cars the date defaults to today (editable on the inspection page). The
+browser tests change the company's document settings, so re-run the seed after `npx playwright test`.
+
 ## Branding and languages
 
 - **Per-company branding** (Settings → Branding, admins only): logo, optional logo for dark

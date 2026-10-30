@@ -52,6 +52,8 @@ const ar: Messages<typeof en> = {
     markVerified: 'تأكيد التحقق',
   },
   choose: {
+    docDate: 'تاريخ المستند',
+    docDateHint: 'يُطبع كـ "Date:" في ورقة المواصفات. اتركه فارغاً لتاريخ اليوم.',
     subtitle: 'السطر تحت الاسم',
     subtitleAuto: 'تلقائي: نوع الهيكل · {{trim}}',
     rows: 'صفوف المواصفات',

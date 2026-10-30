@@ -45,6 +45,8 @@ export default {
     markVerified: 'Mark as verified',
   },
   choose: {
+    docDate: 'Document date',
+    docDateHint: 'Printed as “Date:” on the spec sheet. Leave empty for today.',
     subtitle: 'Subtitle under the name',
     subtitleAuto: 'Automatic: body type · {{trim}}',
     rows: 'Specification rows',
