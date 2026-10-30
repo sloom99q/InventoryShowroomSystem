@@ -1,0 +1,154 @@
+{
+  "_note": "Ground truth for tests. VIN = exact expected chassis id.",
+  "fixtures": [
+    {
+      "file": "a_digital_certificate.pdf",
+      "input_kind": "pdf",
+      "description": "Digital export certificate with text layer; VIN in a key/value table.",
+      "expected_vin": "1GNSKCKD7PR123456",
+      "expected_vin_raw": "1GNSKCKD7PR123456",
+      "expected_candidate_kind": "vin17",
+      "check_digit_valid": true,
+      "match": "exact",
+      "slow": false,
+      "expected_methods": [
+        "text_layer"
+      ],
+      "fields": {
+        "brand": "Chevrolet",
+        "model": "Tahoe High Country",
+        "year": 2023,
+        "color": "Iridescent Pearl White",
+        "mileage_km": 18450
+      }
+    },
+    {
+      "file": "b_scanned_certificate.pdf",
+      "input_kind": "pdf",
+      "description": "Image-only PDF, 200 dpi, 0.8 deg rotation, gaussian noise + speckles.",
+      "expected_vin": "1GKS2DKL5NR245871",
+      "expected_vin_raw": "1GKS2DKL5NR245871",
+      "expected_candidate_kind": "vin17",
+      "check_digit_valid": true,
+      "match": "exact",
+      "slow": true,
+      "expected_methods": [
+        "ocr"
+      ],
+      "fields": {
+        "brand": "GMC",
+        "model": "Yukon Denali",
+        "year": 2022,
+        "color": "Onyx Black",
+        "mileage_km": 42310
+      }
+    },
+    {
+      "file": "c_lowquality_scan.pdf",
+      "input_kind": "pdf",
+      "description": "Image-only PDF, 120 dpi, -1.2 deg, blur 0.7, JPEG q~22 artifacts.",
+      "expected_vin": "2C3CDXGJ3MH581234",
+      "expected_vin_raw": "2C3CDXGJ3MH581234",
+      "expected_candidate_kind": "vin17",
+      "check_digit_valid": true,
+      "match": "exact_or_flagged_suggestion",
+      "slow": true,
+      "expected_methods": [
+        "ocr"
+      ],
+      "fields": {
+        "brand": "Dodge",
+        "model": "Charger Scat Pack",
+        "year": 2021,
+        "color": "Granite Crystal",
+        "mileage_km": 67900
+      }
+    },
+    {
+      "file": "d_listing_card.png",
+      "input_kind": "image",
+      "description": "Dark-theme showroom listing card PNG (1800x1012). EU VIN: check digit intentionally not NA-valid.",
+      "expected_vin": "W1NYC7HJ2RX512345",
+      "expected_vin_raw": "W1NYC7HJ2RX512345",
+      "expected_candidate_kind": "vin17",
+      "check_digit_valid": false,
+      "match": "exact",
+      "slow": true,
+      "expected_methods": [
+        "ocr"
+      ],
+      "fields": {
+        "brand": "Mercedes-Benz",
+        "model": "G 63 AMG",
+        "year": 2024,
+        "color": "Obsidian Black",
+        "mileage_km": 12450
+      }
+    },
+    {
+      "file": "e_ambiguous_vin_scan.pdf",
+      "input_kind": "pdf",
+      "description": "VIN dense in 0/1/5/8/B/S/2/6 glyphs, printed in spaced groups (WMI VDS VIS) in Courier, scanned 150 dpi with blur/JPEG. OCR may read O/I/S/B variants; must surface as flagged suggestion.",
+      "expected_vin": "1FT8W3BTXSEB08612",
+      "expected_vin_raw": "1FT8W3BTXSEB08612",
+      "expected_candidate_kind": "vin17",
+      "check_digit_valid": true,
+      "match": "exact_or_flagged_suggestion",
+      "slow": true,
+      "expected_methods": [
+        "ocr"
+      ],
+      "fields": {
+        "brand": "Ford",
+        "model": "F-350 Super Duty",
+        "year": 2025,
+        "color": "Oxford White",
+        "mileage_km": 5120
+      }
+    },
+    {
+      "file": "f_nonstandard_chassis.pdf",
+      "input_kind": "pdf",
+      "description": "Japanese export certificate translation with frame number URJ202-4012345 (not a VIN).",
+      "expected_vin": "URJ2024012345",
+      "expected_vin_raw": "URJ202-4012345",
+      "expected_candidate_kind": "nonstandard",
+      "check_digit_valid": null,
+      "match": "exact",
+      "slow": false,
+      "expected_methods": [
+        "text_layer"
+      ],
+      "fields": {
+        "brand": "Toyota",
+        "model": "Land Cruiser ZX",
+        "year": 2019,
+        "color": "Pearl White",
+        "mileage_km": 88200
+      }
+    },
+    {
+      "file": "g_mixed_digital_and_scan.pdf",
+      "input_kind": "pdf",
+      "description": "2 pages: page 1 digital cover letter (no VIN), page 2 scanned certificate. Tests hybrid per-page routing.",
+      "expected_vin": "5YJ3E1EB8NF105280",
+      "expected_vin_raw": "5YJ3E1EB8NF105280",
+      "expected_candidate_kind": "vin17",
+      "check_digit_valid": true,
+      "match": "exact",
+      "slow": true,
+      "expected_methods": [
+        "text_layer",
+        "ocr"
+      ],
+      "fields": {
+        "brand": "Tesla",
+        "model": "Model 3 Long Range",
+        "year": 2022,
+        "color": "Midnight Silver Metallic",
+        "mileage_km": 35600
+      },
+      "expected_vin_page": 2
+    }
+  ]
+}

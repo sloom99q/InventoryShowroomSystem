@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+worker/.venv/
+__pycache__/
+web/test-results/
+web/playwright-report/
+web/e2e/screens/
+web/node_modules/.tmp/
+supabase/.temp/
+supabase/.branches/

@@ -1,0 +1,103 @@
+# Showroom inventory
+
+Vehicle inventory for a UAE car showroom. The **chassis number is the identity**: every
+document, photo, accessory, expense and event hangs off one vehicle record.
+
+```
+web/        React + TypeScript + Vite + Tailwind app (the whole UI)
+supabase/   Postgres schema, RLS, RPCs, storage policies, edge function, DB tests
+worker/     Python Docling/OCR scanner — parked, not used by the app yet (see below)
+```
+
+## Architecture decisions (v1)
+
+| Decision | Why |
+|---|---|
+| **No separate API server.** React talks to Supabase directly. | Postgres row-level security does the authorisation; multi-record actions (status change + event, document versioning, Excel import) are SQL functions that run in one transaction. One codebase instead of two. |
+| **One edge function** (`manage-staff`) | Creating logins needs the service-role key, which must never reach the browser. |
+| **`company_id` on every row, enforced by RLS + composite FKs** | Keeps the multi-showroom (SaaS) door open. A row can't even reference another company's vehicle. Nothing else SaaS is built. |
+| **OCR deferred.** Digital PDFs are read in the browser (pdf.js text layer). | Docling needs GBs of models and an always-on server. Decide after seeing her real PDFs: if most are scans, wire up `worker/`. |
+| **Excel import + export on day one** | Her existing sheet is the source of truth; she shouldn't retype 20 cars. |
+| **Nothing important is hard-deleted** | Vehicles are archived; documents, photos, expenses are soft-deleted; replaced files become older versions. Every change is in `audit_logs`. |
+
+### Data integrity rules (enforced in the database, not just the UI)
+
+- `UNIQUE(company_id, chassis_normalized)` — `lvv-db21 b9…` and `LVVDB21B9…` are the same car.
+- A chassis number is never auto-corrected. I/O/Q and check-digit problems are shown as warnings
+  with a *suggestion*; a person decides. Non-17-character frame numbers are allowed.
+- Only admin/secretary can change a chassis number; a change resets "checked against documents".
+- `sold`/`delivered` require a sale/delivery date (check constraint). Status changes always write a
+  timeline event (trigger), with the user and note.
+- Money is `numeric(12,2)`; totals are computed in SQL or in integer fils.
+- Timestamps are `timestamptz`; the UI shows and accepts UAE time (Asia/Dubai).
+- Files: one **private** bucket, path `<company>/<vehicle>/<kind>/<uuid>.<ext>`, read only through
+  1-hour signed URLs. Uploads are type-checked by magic bytes (not file name / browser MIME) and the
+  bucket only accepts PDF/JPEG/PNG/WebP/HEIC up to 50 MB. Originals are never overwritten.
+- Uploading a document whose text mentions a *different* chassis is blocked until a person confirms.
+
+### Roles
+
+| Role | Can |
+|---|---|
+| Admin | everything, plus staff accounts and settings |
+| Secretary | add/edit vehicles, correct chassis numbers, archive, see change history |
+| Staff / technician | photos, expenses, accessories, status changes |
+| Read-only | view only |
+
+## Local development
+
+Needs Node 24+, Docker (e.g. `brew install colima docker && colima start`) and the
+Supabase CLI (`brew install supabase/tap/supabase`).
+
+```sh
+supabase start                       # Postgres, Auth, Storage, Studio on 5432x ports
+supabase functions serve &           # staff-account function
+cd web && npm install
+cp .env.example .env.local           # local anon key from `supabase status`
+# first company + admin login (service-role key from `supabase status`):
+SUPABASE_SERVICE_ROLE_KEY=... node scripts/bootstrap.mjs "Showroom name" admin@example.com 'password' "Full Name"
+npm run dev                          # http://127.0.0.1:5173
+```
+
+After changing SQL: `supabase db reset` then
+`supabase gen types typescript --local > web/src/lib/database.types.ts`.
+
+## Tests
+
+The suite covers what would hurt if it broke:
+
+```sh
+supabase test db                 # 27 pgTAP checks: duplicate chassis, tenant isolation, file
+                                 # privacy, read-only role, exact expense totals, sale dates, audit
+cd web && npm test               # VIN rules, candidate detection, money parsing
+cd web && npx playwright test    # end-to-end: add → document check → expenses → sell → search,
+                                 # PDF chassis reading, phone photo upload (needs a bootstrapped admin)
+```
+
+## Deploying (private web app)
+
+1. Create a Supabase project (region: closest to UAE, e.g. `ap-south-1` Mumbai / `eu-central-1`).
+2. `supabase link --project-ref …` → `supabase db push` → `supabase functions deploy manage-staff`.
+3. In the dashboard: Auth → disable sign-ups; set Site URL to the app's URL.
+4. Run `scripts/bootstrap.mjs` once against the project URL with the service-role key.
+5. Build `web` (`npm run build`) and host `web/dist` on any static host (Vercel, Netlify, Cloudflare
+   Pages) with `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` set and SPA fallback to `index.html`.
+
+### Backups
+
+- Supabase Pro includes daily database backups (7 days) and optional point-in-time recovery.
+  The free tier has **no** automatic backups — use Pro for production.
+- Storage files are not included in database backups. Weekly, copy the bucket:
+  `supabase storage cp -r ss:///vehicle-files ./backup/files --experimental` (or S3-compatible sync).
+- Independent DB dump: `supabase db dump --data-only -f backup/data-$(date +%F).sql`.
+- The Excel export on *Import & export* is a human-readable snapshot she can keep too.
+
+## Not built yet (deliberately)
+
+- **OCR for scanned documents** — `worker/` has a tested Docling + Apple Vision/RapidOCR pipeline and
+  VIN candidate logic with fixtures. Wire it in only if her real files are mostly scans: it would
+  poll `document_jobs`, write candidates to `extracted_data`, and the existing verify screen would
+  show them. Until then scans are attached and verified by eye.
+- Arabic interface — layout uses logical (RTL-safe) CSS and all enum labels live in
+  `web/src/lib/labels.ts`; page copy still needs extracting into a dictionary.
+- Reports, notifications, information-card generation, bulk folder upload, SaaS billing.
