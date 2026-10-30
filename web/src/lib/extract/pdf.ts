@@ -3,6 +3,7 @@ import { findCandidates } from '@/lib/vin'
 import { isDocumentHeading, parseTitle } from './core'
 import { norm, pageLines, type Line, type TextItem } from './layout'
 import { applyLigatureFixes, glyphRuns, ligatureFixesFromRuns } from './ligatures'
+import { docDataFacts, isBrochure, isDocData, isSpecSheet, type PdfPage, readBrochure, readSpecSheet } from './showroom'
 import { structure } from './structure'
 import type { Extraction, Fact, ImageCandidate } from './types'
 
@@ -57,6 +58,31 @@ export function titleFacts(title: string, fileKey: string, page: number | null):
   return facts
 }
 
+/** Vehicle data embedded by the app's own exports (data.json), if any. */
+async function embeddedData(doc: PdfDoc) {
+  try {
+    type Att = { filename?: string; content?: Uint8Array }
+    const att = (await doc.getAttachments()) as Map<string, Att> | Record<string, Att> | null
+    // pdf.js returns a Map (contents fetched separately) in recent versions, a plain object in older ones.
+    const entries: [string, Att][] = att instanceof Map ? [...att.entries()] : Object.entries(att ?? {})
+    const getContent = (doc as unknown as { getAttachmentContent?: (id: string) => Promise<{ content?: Uint8Array } | Uint8Array> }).getAttachmentContent
+    for (const [id, a] of entries) {
+      if (!/\.json$/i.test(a.filename ?? '')) continue
+      let bytes = a.content
+      if (!bytes && getContent) {
+        const c = await getContent.call(doc, id)
+        bytes = c instanceof Uint8Array ? c : c?.content
+      }
+      if (!bytes) continue
+      const data = JSON.parse(new TextDecoder().decode(bytes))
+      if (isDocData(data)) return data
+    }
+  } catch {
+    /* no or unreadable attachments */
+  }
+  return null
+}
+
 export async function extractPdf(data: Uint8Array, pdfjs: PdfJs, fileKey = 'file'): Promise<Extraction> {
   const task = pdfjs.getDocument({ data: data.slice() })
   const doc = await task.promise
@@ -64,9 +90,14 @@ export async function extractPdf(data: Uint8Array, pdfjs: PdfJs, fileKey = 'file
     const all: Line[] = []
     const pages: string[] = []
     const imageOnlyPages: number[] = []
+    const raw: PdfPage[] = []
     for (let p = 1; p <= doc.numPages; p++) {
-      const lines = pageLines(await pageItems(doc, p))
-      const fixes = ligatureFixesFromRuns(glyphRuns(await (await doc.getPage(p)).getOperatorList(), pdfjs.OPS as unknown as Record<string, number>))
+      const items = await pageItems(doc, p)
+      const page = await doc.getPage(p)
+      const [x0, y0, x1, y1] = page.view
+      const lines = pageLines(items)
+      const fixes = ligatureFixesFromRuns(glyphRuns(await page.getOperatorList(), pdfjs.OPS as unknown as Record<string, number>))
+      raw.push({ page: p, items, width: x1 - x0, height: y1 - y0, fixes })
       if (fixes.size) for (const l of lines) {
         l.text = applyLigatureFixes(l.text, fixes)
         l.cells = l.cells.map((c) => applyLigatureFixes(c, fixes))
@@ -76,21 +107,37 @@ export async function extractPdf(data: Uint8Array, pdfjs: PdfJs, fileKey = 'file
       pages.push(text)
       if (readable(text) < MIN_PAGE_CHARS) imageOnlyPages.push(p)
     }
-    const titleLines = findTitle(all)
-    const title = titleLines.length ? norm(titleLines.map((l) => l.text).join(' ')) : null
-    const { facts, unstructured } = structure(all.filter((l) => !titleLines.includes(l)), fileKey)
-    const extraction: Extraction = {
-      kind: 'pdf',
+    const base = {
+      kind: 'pdf' as const,
       pages,
       hasText: pages.some((t) => readable(t) >= MIN_PAGE_CHARS),
-      facts: [...(title ? titleFacts(title, fileKey, 1) : []), ...facts],
-      unstructured,
-      title,
       chassisCandidates: findCandidates(pages),
       imageOnlyPages,
       inventorySheet: null,
     }
-    return extraction
+
+    // The showroom's own documents: exact data first, then the two known layouts.
+    const embedded = await embeddedData(doc)
+    if (embedded) {
+      const brochure = isBrochure(raw)
+      const b = brochure ? readBrochure(raw, fileKey) : null
+      return { ...base, facts: docDataFacts(embedded, fileKey), unstructured: [], layout: 'embedded',
+        title: [embedded.identity.brand, embedded.identity.model, embedded.identity.year].filter(Boolean).join(' '),
+        photoPages: b?.photoPages ?? (brochure ? null : []), coverPage: b?.coverPage ?? null }
+    }
+    if (isSpecSheet(raw)) {
+      const r = readSpecSheet(raw[0], fileKey)
+      return { ...base, facts: r.facts, unstructured: [], title: r.title, layout: 'spec_sheet', photoPages: [] }
+    }
+    if (isBrochure(raw)) {
+      const r = readBrochure(raw, fileKey)
+      return { ...base, facts: r.facts, unstructured: [], title: r.title, layout: 'brochure', photoPages: r.photoPages, coverPage: r.coverPage }
+    }
+
+    const titleLines = findTitle(all)
+    const title = titleLines.length ? norm(titleLines.map((l) => l.text).join(' ')) : null
+    const { facts, unstructured } = structure(all.filter((l) => !titleLines.includes(l)), fileKey)
+    return { ...base, facts: [...(title ? titleFacts(title, fileKey, 1) : []), ...facts], unstructured, title }
   } finally {
     await task.destroy()
   }
@@ -143,16 +190,27 @@ function drawImage(img: PdfImage): OffscreenCanvas | HTMLCanvasElement | null {
  * resolution, and a rendered image of text-less pages that hold no large
  * embedded picture. Logos and icons (small images) are skipped.
  */
-export async function pdfImageCandidates(data: Uint8Array, pdfjs: PdfJs, fileKey: string, imageOnlyPages: number[] = []): Promise<ImageCandidate[]> {
+export async function pdfImageCandidates(
+  data: Uint8Array,
+  pdfjs: PdfJs,
+  fileKey: string,
+  imageOnlyPages: number[] = [],
+  /** Only these pages, one picture each (the largest), e.g. a brochure's cover + photo pages. */
+  photoPages: number[] | null = null,
+  coverPage: number | null = null,
+): Promise<ImageCandidate[]> {
   const task = pdfjs.getDocument({ data: data.slice() })
   const doc = await task.promise
   const out: ImageCandidate[] = []
   const seen = new Set<string>()
   try {
     for (let p = 1; p <= doc.numPages; p++) {
+      if (photoPages && !photoPages.includes(p)) continue
+      const role = photoPages ? (p === coverPage ? 'cover' as const : 'photo' as const) : undefined
       const page = await doc.getPage(p)
       const ops = await page.getOperatorList()
       let bigOnPage = false
+      let best: { img: PdfImage; id: string | null } | null = null
       for (let i = 0; i < ops.fnArray.length; i++) {
         const fn = ops.fnArray[i]
         if (fn !== pdfjs.OPS.paintImageXObject && fn !== pdfjs.OPS.paintInlineImageXObject) continue
@@ -168,6 +226,10 @@ export async function pdfImageCandidates(data: Uint8Array, pdfjs: PdfJs, fileKey
         } else img = arg as PdfImage
         if (!img || img.width < MIN_SIDE || img.height < MIN_SIDE || img.width * img.height < MIN_AREA) continue
         bigOnPage = true
+        if (photoPages) {
+          if (!best || img.width * img.height > best.img.width * best.img.height) best = { img, id }
+          continue
+        }
         const key = `${id ?? 'inline'}:${img.width}x${img.height}`
         if (id && seen.has(key)) continue
         seen.add(key)
@@ -175,12 +237,17 @@ export async function pdfImageCandidates(data: Uint8Array, pdfjs: PdfJs, fileKey
         if (!canvas) continue
         out.push({ id: `${fileKey}:p${p}:${out.length}`, fileKey, page: p, blob: await toBlob(canvas), width: img.width, height: img.height, origin: 'embedded' })
       }
-      if (!bigOnPage && imageOnlyPages.includes(p)) {
+      if (best) {
+        const canvas = drawImage(best.img)
+        if (canvas) out.push({ id: `${fileKey}:p${p}:0`, fileKey, page: p, blob: await toBlob(canvas), width: best.img.width, height: best.img.height, origin: 'embedded', role })
+        continue
+      }
+      if (!bigOnPage && (imageOnlyPages.includes(p) || (photoPages && p !== coverPage))) {
         const base = page.getViewport({ scale: 1 })
         const viewport = page.getViewport({ scale: 1600 / base.width })
         const c = canvasOf(Math.round(viewport.width), Math.round(viewport.height))
         await page.render({ canvas: c as HTMLCanvasElement, viewport }).promise
-        out.push({ id: `${fileKey}:p${p}:page`, fileKey, page: p, blob: await toBlob(c), width: c.width, height: c.height, origin: 'page' })
+        out.push({ id: `${fileKey}:p${p}:page`, fileKey, page: p, blob: await toBlob(c), width: c.width, height: c.height, origin: 'page', role })
       }
     }
   } finally {

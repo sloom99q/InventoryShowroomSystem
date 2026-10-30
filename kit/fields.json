@@ -1,90 +1,285 @@
 {
   "_about": "Fixed field catalogue for every vehicle. Taken from the showroom's own two documents (spec sheet + brochure). The car page, the import mapping and both PDF templates all use THIS list. Values are per vehicle: { en, ar }. Labels are fixed here and never typed by the secretary.",
-
   "identity": [
-    { "key": "brand",          "label_en": "Brand",          "label_ar": "العلامة التجارية", "required": true },
-    { "key": "model",          "label_en": "Model",          "label_ar": "الطراز",           "required": true },
-    { "key": "year",           "label_en": "Model year",     "label_ar": "سنة الصنع",        "required": true },
-    { "key": "trim",           "label_en": "Trim",           "label_ar": "الفئة" },
-    { "key": "description",    "label_en": "Description",    "label_ar": "الوصف",            "hint": "Short line under the title, e.g. body type and positioning" },
-    { "key": "regional_specs", "label_en": "Regional specs", "label_ar": "المواصفات",        "hint": "e.g. GCC specs, Chinese specs" },
-    { "key": "listing_price",  "label_en": "Asking price",   "label_ar": "السعر",            "type": "money" }
+    {
+      "key": "brand",
+      "label_en": "Brand",
+      "label_ar": "العلامة التجارية",
+      "required": true
+    },
+    {
+      "key": "model",
+      "label_en": "Model",
+      "label_ar": "الطراز",
+      "required": true
+    },
+    {
+      "key": "year",
+      "label_en": "Model year",
+      "label_ar": "سنة الصنع",
+      "required": true
+    },
+    {
+      "key": "trim",
+      "label_en": "Trim",
+      "label_ar": "الفئة"
+    },
+    {
+      "key": "description",
+      "label_en": "Description",
+      "label_ar": "الوصف",
+      "hint": "Short line under the title, e.g. body type and positioning"
+    },
+    {
+      "key": "regional_specs",
+      "label_en": "Regional specs",
+      "label_ar": "المواصفات",
+      "hint": "e.g. GCC specs, Chinese specs"
+    },
+    {
+      "key": "listing_price",
+      "label_en": "Asking price",
+      "label_ar": "السعر",
+      "type": "money"
+    }
   ],
-
   "sections": [
     {
-      "key": "engine_performance", "title_en": "ENGINE & PERFORMANCE", "title_ar": "المحرك والأداء", "brochure_slide": 1,
+      "key": "engine_performance",
+      "title_en": "ENGINE & PERFORMANCE",
+      "title_ar": "المحرك والأداء",
+      "brochure_slide": 1,
       "fields": [
-        { "key": "engine",          "label_en": "Engine",              "label_ar": "المحرك" },
-        { "key": "electric_motors", "label_en": "Electric Motors",     "label_ar": "المحركات الكهربائية" },
-        { "key": "total_output",    "label_en": "Combined Power",      "label_ar": "القوة الإجمالية" },
-        { "key": "max_torque",      "label_en": "Maximum Torque",      "label_ar": "عزم الدوران الأقصى" },
-        { "key": "battery",         "label_en": "Battery Capacity",    "label_ar": "سعة البطارية" },
-        { "key": "drive",           "label_en": "Drive Type",          "label_ar": "نظام الدفع" },
-        { "key": "acceleration",    "label_en": "0–100 km/h",          "label_ar": "التسارع من 0 إلى 100 كم/ساعة" },
-        { "key": "top_speed",       "label_en": "Top Speed",           "label_ar": "السرعة القصوى" },
-        { "key": "range",           "label_en": "Total Driving Range", "label_ar": "مدى القيادة الإجمالي" }
+        {
+          "key": "engine",
+          "label_en": "Engine",
+          "label_ar": "المحرك"
+        },
+        {
+          "key": "electric_motors",
+          "label_en": "Electric Motors",
+          "label_ar": "المحركات الكهربائية"
+        },
+        {
+          "key": "total_output",
+          "label_en": "Combined Power",
+          "label_ar": "القوة الإجمالية"
+        },
+        {
+          "key": "max_torque",
+          "label_en": "Maximum Torque",
+          "label_ar": "عزم الدوران الأقصى"
+        },
+        {
+          "key": "battery",
+          "label_en": "Battery Capacity",
+          "label_ar": "سعة البطارية"
+        },
+        {
+          "key": "drive",
+          "label_en": "Drive Type",
+          "label_ar": "نظام الدفع"
+        },
+        {
+          "key": "acceleration",
+          "label_en": "0–100 km/h",
+          "label_ar": "التسارع من 0 إلى 100 كم/ساعة"
+        },
+        {
+          "key": "top_speed",
+          "label_en": "Top Speed",
+          "label_ar": "السرعة القصوى"
+        },
+        {
+          "key": "range",
+          "label_en": "Total Driving Range",
+          "label_ar": "مدى القيادة الإجمالي"
+        }
       ]
     },
     {
-      "key": "suspension_chassis", "title_en": "SUSPENSION & CHASSIS", "title_ar": "التعليق والهيكل", "brochure_slide": 1,
+      "key": "suspension_chassis",
+      "title_en": "SUSPENSION & CHASSIS",
+      "title_ar": "التعليق والهيكل",
+      "brochure_slide": 1,
       "fields": [
-        { "key": "front_suspension",  "label_en": "Front Suspension",  "label_ar": "التعليق الأمامي" },
-        { "key": "rear_suspension",   "label_en": "Rear Suspension",   "label_ar": "التعليق الخلفي" },
-        { "key": "suspension_system", "label_en": "Suspension System", "label_ar": "نظام التعليق" },
-        { "key": "drivetrain",        "label_en": "Drivetrain",        "label_ar": "نظام نقل الحركة" },
-        { "key": "dimensions",        "label_en": "L × W × H",         "label_ar": "الأبعاد",            "in_brochure": false },
-        { "key": "wheels",            "label_en": "Wheels",            "label_ar": "مواصفات العجلات",   "in_brochure": false }
+        {
+          "key": "front_suspension",
+          "label_en": "Front Suspension",
+          "label_ar": "التعليق الأمامي"
+        },
+        {
+          "key": "rear_suspension",
+          "label_en": "Rear Suspension",
+          "label_ar": "التعليق الخلفي"
+        },
+        {
+          "key": "suspension_system",
+          "label_en": "Suspension System",
+          "label_ar": "نظام التعليق"
+        },
+        {
+          "key": "drivetrain",
+          "label_en": "Drivetrain",
+          "label_ar": "نظام نقل الحركة"
+        },
+        {
+          "key": "dimensions",
+          "label_en": "L × W × H",
+          "label_ar": "الأبعاد",
+          "in_brochure": false
+        },
+        {
+          "key": "wheels",
+          "label_en": "Wheels",
+          "label_ar": "مواصفات العجلات",
+          "in_brochure": false
+        }
       ]
     },
     {
-      "key": "fuel", "title_en": "FUEL CONSUMPTION", "title_ar": "استهلاك الوقود", "brochure_slide": 1,
+      "key": "fuel",
+      "title_en": "FUEL CONSUMPTION",
+      "title_ar": "استهلاك الوقود",
+      "brochure_slide": 1,
       "fields": [
-        { "key": "fuel_consumption", "label_en": "Claimed Fuel",       "label_ar": "استهلاك الوقود" },
-        { "key": "fuel_tank",        "label_en": "Fuel Tank Capacity", "label_ar": "سعة خزان الوقود" },
-        { "key": "powertrain_type",  "label_en": "Powertrain Type",    "label_ar": "نوع النظام" }
+        {
+          "key": "fuel_consumption",
+          "label_en": "Claimed Fuel",
+          "label_ar": "استهلاك الوقود"
+        },
+        {
+          "key": "fuel_tank",
+          "label_en": "Fuel Tank Capacity",
+          "label_ar": "سعة خزان الوقود"
+        },
+        {
+          "key": "powertrain_type",
+          "label_en": "Powertrain Type",
+          "label_ar": "نوع النظام"
+        }
       ]
     },
     {
-      "key": "drive_modes", "title_en": "DRIVE MODES", "title_ar": "أوضاع القيادة", "brochure_slide": 2,
-      "list": "drive_modes", "list_hint": "One entry per mode. Printed as one bullet joined with ' / '."
+      "key": "drive_modes",
+      "title_en": "DRIVE MODES",
+      "title_ar": "أوضاع القيادة",
+      "brochure_slide": 2,
+      "list": "drive_modes",
+      "list_hint": "One entry per mode. Printed as one bullet joined with ' / '."
     },
     {
-      "key": "interior", "title_en": "INTERIOR SPECS", "title_ar": "المقصورة الداخلية", "brochure_slide": 2,
+      "key": "interior",
+      "title_en": "INTERIOR SPECS",
+      "title_ar": "المقصورة الداخلية",
+      "brochure_slide": 2,
       "fields": [
-        { "key": "seating",   "label_en": "Seating Capacity", "label_ar": "عدد المقاعد" },
-        { "key": "wheelbase", "label_en": "Wheelbase",        "label_ar": "قاعدة العجلات" }
+        {
+          "key": "seating",
+          "label_en": "Seating Capacity",
+          "label_ar": "عدد المقاعد"
+        },
+        {
+          "key": "wheelbase",
+          "label_en": "Wheelbase",
+          "label_ar": "قاعدة العجلات"
+        }
       ],
       "list": "interior_features"
     },
     {
-      "key": "smart_driving", "title_en": "SMART DRIVING", "title_ar": "القيادة الذكية", "brochure_slide": 2,
+      "key": "smart_driving",
+      "title_en": "SMART DRIVING",
+      "title_ar": "القيادة الذكية",
+      "brochure_slide": 2,
       "list": "smart_features"
     }
   ],
-
-  "key_features": { "label_en": "KEY FEATURES", "max": 10, "hint": "Short one-line selling points for the spec sheet (English only). 8–10 fills the block like the original." },
-
+  "key_features": {
+    "label_en": "KEY FEATURES",
+    "max": 10,
+    "hint": "Short one-line selling points for the spec sheet (English only). 8–10 fills the block like the original."
+  },
   "spec_sheet_rows": [
-    { "label_en": "Regional specs", "label_ar": "المواصفات",          "value": "regional_specs" },
-    { "label_en": "Powertrain",     "label_ar": "منظومة نقل الحركة",  "value": "powertrain_type" },
-    { "label_en": "Engine",         "label_ar": "المحرك",             "value": "engine" },
-    { "label_en": "Total output",   "label_ar": "القوة الإجمالية",    "value": "total_output", "append": "max_torque", "joiner": " / " },
-    { "label_en": "0–100 km/h",     "label_ar": "التسارع",            "value": "acceleration" },
-    { "label_en": "Top speed",      "label_ar": "السرعة القصوى",      "value": "top_speed" },
-    { "label_en": "Drive",          "label_ar": "نظام الدفع",         "value": "drive" },
-    { "label_en": "Battery",        "label_ar": "البطارية",           "value": "battery" },
-    { "label_en": "Range",          "label_ar": "المدى الإجمالي",     "value": "range" },
-    { "label_en": "Seating",        "label_ar": "المقاعد",            "value": "seating" },
-    { "label_en": "L × W × H",      "label_ar": "الأبعاد",            "value": "dimensions" },
-    { "label_en": "Wheelbase",      "label_ar": "قاعدة العجلات",      "value": "wheelbase" },
-    { "label_en": "Wheels",         "label_ar": "مواصفات العجلات",    "value": "wheels" }
+    {
+      "label_en": "Regional specs",
+      "label_ar": "المواصفات",
+      "value": "regional_specs"
+    },
+    {
+      "label_en": "Powertrain",
+      "label_ar": "منظومة نقل الحركة",
+      "value": "powertrain_type"
+    },
+    {
+      "label_en": "Engine",
+      "label_ar": "المحرك",
+      "value": "engine",
+      "label_if": {
+        "field": "powertrain_type",
+        "pattern": "range[- ]?ext|EREV",
+        "label_en": "Range extender",
+        "label_ar": "موسع المدى"
+      }
+    },
+    {
+      "label_en": "Total output",
+      "label_ar": "القوة الإجمالية",
+      "value": "total_output",
+      "append": "max_torque",
+      "joiner": " / "
+    },
+    {
+      "label_en": "0–100 km/h",
+      "label_ar": "التسارع",
+      "value": "acceleration"
+    },
+    {
+      "label_en": "Top speed",
+      "label_ar": "السرعة القصوى",
+      "value": "top_speed"
+    },
+    {
+      "label_en": "Drive",
+      "label_ar": "نظام الدفع",
+      "value": "drive"
+    },
+    {
+      "label_en": "Battery",
+      "label_ar": "البطارية",
+      "value": "battery"
+    },
+    {
+      "label_en": "Range",
+      "label_ar": "المدى الإجمالي",
+      "value": "range"
+    },
+    {
+      "label_en": "Seating",
+      "label_ar": "المقاعد",
+      "value": "seating"
+    },
+    {
+      "label_en": "L × W × H",
+      "label_ar": "الأبعاد",
+      "value": "dimensions"
+    },
+    {
+      "label_en": "Wheelbase",
+      "label_ar": "قاعدة العجلات",
+      "value": "wheelbase"
+    },
+    {
+      "label_en": "Wheels",
+      "label_ar": "مواصفات العجلات",
+      "value": "wheels"
+    }
   ],
-
   "rules": [
     "A row, bullet or section with no value is left out of the printed documents. Nothing prints as empty or '—'.",
     "Spec sheet prints English values; Arabic appears only as the row label.",
     "Brochure prints 'Label: value' in English on the left and 'Arabic label: Arabic value' on the right.",
-    "Extracted facts that match no field here are kept as 'Other (not printed)' on the car page, never added to the documents automatically."
+    "Extracted facts that match no field here are kept as 'Other (not printed)' on the car page, never added to the documents automatically.",
+    "Spec sheet row label_if: when the named field matches pattern (case-insensitive), print the alternative labels. Lets an EREV car say 'Range extender' like the original."
   ]
 }

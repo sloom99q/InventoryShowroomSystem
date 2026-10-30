@@ -1,5 +1,16 @@
 # Showroom document kit: read this first
 
+> **Kit v2. What changed since v1.** Sections 1–4 are already built. This round:
+> - Section 5: banner per car.
+> - Section 6: import round trip.
+> - Template changes to port:
+>   - heading bars: letter-spacing 2pt, no kerning
+>   - disclaimer: wraps 3pt wider, word-spacing −0.11pt
+>   - spec-sheet row `label_if` ("Range extender")
+>   - `bannerHTML()`
+> - `compare.py` now compares word by word, so line grouping no longer matters.
+> - New reference PDFs. Re-run your compare tests against them.
+
 The car page, the import screen and the two PDFs grew their own structure. The result is messy, and the PDFs don't match what the showroom actually sends.
 
 From now on **the showroom's two documents define the app**. Everything in this kit was measured from the real spec sheet and brochure, and verified by overlaying them.
@@ -13,8 +24,11 @@ sample/                Fictional test car (Valtren Orisa X5) + placeholder photo
 reference/             Correct output for the sample car: spec-sheet.pdf, brochure.pdf
 compare.py             Checks a generated PDF against the reference (±2 pt)
 car-page-mockup/       Target design for the vehicle page (html + png)
-assets/                Header banner + watermark (the watermark was rebuilt from how the
-                       original actually renders; use this file, not an extracted one)
+assets/                banner-left.png + banner-text.png (layered per-car banner), fallback
+                       spec-header-banner.jpg, watermark (rebuilt from how the original
+                       renders; use this file, not an extracted one)
+real-fixtures/         The showroom's two real files + what a correct import must produce
+                       (TEST INPUT ONLY, see section 6)
 fonts/                 Liberation Sans (=Arial metrics), Carlito (=Calibri metrics),
                        Noto Naskh Arabic. Embed these; no other fonts.
 ```
@@ -66,10 +80,61 @@ Keep the extraction engine. Change only where facts land:
   - Warnings: no price; empty fields; missing Arabic; fewer than 3 photos.
 - **Keep:** saving every export to the vehicle with versions, and the audit log.
 
-## 5. Done when
+## 5. The banner shows each car (NEW)
+
+The spec sheet's header banner is Sinolink branding on the left and **that car's photo** on the right, darkened, with the slogans on top. It's no longer one fixed image.
+- **Company assets** (Settings → Documents):
+  - `assets/banner-left.png`: logo, tagline and the red diagonal, with the photo area transparent.
+  - `assets/banner-text.png`: the white slogans and services list, transparent background.
+  - Keep `spec-header-banner.jpg` only as a fallback.
+- **Per vehicle:** `photos.banner` (defaults to the cover photo), `photos.banner_pos` (CSS object-position, default "50% 50%") and `photos.banner_zoom` (default 1).
+  - On the inspection page, add a small "Banner photo" control: pick a photo from the gallery, drag to set the focus point, and a zoom slider.
+  - The live preview updates as these change.
+- **Exact layering, geometry and darkness:** see `bannerHTML()` in templates.js. Port it exactly.
+
+## 6. Import must round-trip the showroom's own documents (NEW, the main problem now)
+
+Importing the showroom's own spec sheet or brochure must fill the fields so that exporting reproduces that same document. Today it doesn't. The generic extractor is fine for other people's documents. For these two layouts, add a dedicated reader for each.
+
+**Recognise the layout:**
+- Spec sheet: has "VEHICLE SPEC SHEET", a SPECIFICATIONS table and KEY FEATURES.
+- Brochure: 16:9 pages whose section headings match `fields.json` section titles.
+
+**Spec sheet reader:**
+- **Title:** the largest text is brand + model, and the 4-digit number after it is the year. "Date: …" is the document date, never the year.
+- **Subtitle:** split on " · ". The last part is the trim; the rest is the description.
+- **Price:** "AED 140,000" → listing_price 140000, currency AED.
+- **Table rows:** the English label maps through `spec_sheet_rows` (including the `label_if` alternative, so "Range extender" → engine). The value column is the value. The Arabic column is a label only, never a value.
+- **"Total output":** if the value ends in " / <number> Nm", split it into total_output and max_torque. Export joins them back.
+- **KEY FEATURES:** read left column top to bottom, then the right column, into key_features in that order.
+- **Footer and disclaimer:** company settings. Ignore them.
+
+**Brochure reader:**
+- **Page 1:** name on one line, year on the next.
+- **Pages with no text:** photos (already done). Page 1's picture is the cover.
+- **Columns:** English bullets on the left, Arabic on the right, both grouped under the section headings.
+  - "Label: value" (or "Label : value") → field by English label, plus a small alias list.
+  - Unlabelled bullets in list sections → list items.
+  - DRIVE MODES: one bullet; split it on "/".
+- **Arabic:** pair Arabic bullets with English bullets **by position within the same section** when the counts match. When they differ, pair in order and keep the extra Arabic item as an Arabic-only item.
+  - A pair gives that field its `ar` value: the text after the Arabic label's colon, or the whole bullet if there is no label.
+  - Normalise Arabic: NFKC, plus the lam-alef order fix you already have.
+- **Wrapped lines:** a line with no bullet continues the previous bullet.
+
+**Test fixtures** are in `real-fixtures/`: the two real files and `*.expected.json`. These are the showroom's own files, used ONLY as test inputs. **Not one value from them may appear in app code.** The code must work for the next car (Leopard, etc.) with no change.
+
+**Tests:**
+1. Import `14_VOYAH_FREE_Spec_Sheet.pdf` into a new car → the fields equal `spec-sheet.expected.json`.
+   - Then export the spec sheet with document date 2026-10-19 and the fallback banner.
+   - `compare.py real-fixtures/14_VOYAH_FREE_Spec_Sheet.pdf exported.pdf` must print **PASS**. Claude (outside the app) already confirmed that these exact values render to a PASS, so it is achievable.
+2. Import `VOYAH_FREE.pdf` into a new car → the English values and lists equal `brochure.expected.json`, the Arabic values contain the listed tokens, the Arabic list counts match, and 17 photos plus the cover are offered.
+3. Import both files together → conflicts appear only where the two files really disagree (for example "Combined Power"). After choosing, nothing is lost.
+4. Round trip of the app's own output: export the sample car, import both exports into a new car → every field, list item and key feature is identical, and the Other group is empty.
+
+## 7. Done when
 
 1. `compare.py` prints PASS for both sample documents, and the result looks identical to `reference/` by eye.
 2. The car page matches the mockup's structure, using real data from the database.
 3. Importing files fills the fixed fields; unmatched facts go to Other.
 4. All existing tests still pass. Add tests for the field mapping and for the compare step.
-5. No real showroom vehicle data appears in code or tests. The fictional sample car is the only test data.
+5. No real showroom vehicle data appears in app code. Real files are allowed only as test fixtures (`real-fixtures/`).

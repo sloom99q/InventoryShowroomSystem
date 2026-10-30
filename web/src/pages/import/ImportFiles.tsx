@@ -153,7 +153,7 @@ export default function ImportFiles({ embedded = false }: { embedded?: boolean }
   }
   const fieldChoices = Object.fromEntries([...placement.fields].map(([k, c]) => [k, k in fieldOverride ? fieldOverride[k] : defaultBiChoice(c, currentField(k))])) as Record<string, BiChoice>
   const photoChoice = useMemo(() => Object.fromEntries(files.flatMap((f) => f.images).map((i) => [i.id,
-    photoOverride[i.id] ?? { keep: i.origin === 'file', type: i.origin === 'file' ? 'arrival' : 'other' }])), [files, photoOverride])
+    photoOverride[i.id] ?? { keep: i.origin === 'file' || !!i.role, type: i.role === 'cover' ? 'current' : i.origin === 'file' || i.role ? 'arrival' : 'other' }])), [files, photoOverride])
 
   // ---- What still needs the secretary ------------------------------------------------
   const newChassis = isNew ? chosenValue('chassis_number', choices.chassis_number, cands.chassis_number) : null
@@ -193,6 +193,7 @@ export default function ImportFiles({ embedded = false }: { embedded?: boolean }
       }
       const keep = files.flatMap((f) => f.images.map((i) => ({ i, f }))).filter(({ i }) => photoChoice[i.id]?.keep)
       const images = []
+      const roles: { path: string; role: 'cover' | 'photo' }[] = []
       for (const [n, { i, f }] of keep.entries()) {
         setSaving(t('saving.photo', { n: n + 1, total: keep.length }))
         const type = i.blob.type || 'image/png'
@@ -204,6 +205,7 @@ export default function ImportFiles({ embedded = false }: { embedded?: boolean }
         const thumb = await makeThumbnail(new File([i.blob], name, { type }))
         if (thumb) { thumbnail_path = path.replace(/\.[a-z]+$/, '.thumb.webp'); await uploadObject(thumbnail_path, thumb, 'image/webp') }
         images.push({ storage_path: path, thumbnail_path, original_filename: name, mime_type: type, file_size: i.blob.size, image_type: photoChoice[i.id].type })
+        if (i.role) roles.push({ path, role: i.role })
       }
 
       const fields: Record<string, string> = {}
@@ -241,6 +243,16 @@ export default function ImportFiles({ embedded = false }: { embedded?: boolean }
         p_fields: fields, p_documents: documents, p_images: images, p_specs: out,
       } as never)
       if (error) throw error
+      // A brochure's own cover and photo pages become this car's brochure cover and photo order.
+      if (roles.length) {
+        const { data: rows } = await supabase.from('vehicle_images').select('id, storage_path').eq('vehicle_id', vid as string).in('storage_path', roles.map((r) => r.path))
+        const idOf = new Map((rows ?? []).map((r) => [r.storage_path, r.id]))
+        const coverId = roles.filter((r) => r.role === 'cover').map((r) => idOf.get(r.path)).find(Boolean) ?? null
+        const photoIds = roles.filter((r) => r.role === 'photo').map((r) => idOf.get(r.path)).filter((x): x is string => !!x)
+        const { data: veh } = await supabase.from('vehicles').select('doc_settings').eq('id', vid as string).single()
+        const current = (veh?.doc_settings && typeof veh.doc_settings === 'object' && !Array.isArray(veh.doc_settings) ? veh.doc_settings : {}) as Record<string, unknown>
+        await supabase.from('vehicles').update({ doc_settings: { ...current, brochure: { coverId, photoIds } } as never }).eq('id', vid as string)
+      }
       qc.invalidateQueries()
       toast.success(t('saved', { count: out.length }))
       nav(`/vehicles/${vid}`)

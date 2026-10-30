@@ -26,6 +26,12 @@ export type Fact = {
   source: SourceRef
   /** Exact source line(s). */
   raw: string
+  /** Set by a dedicated reader that knows exactly which catalogue field this fills (kit fields.json key). */
+  fieldKey?: string
+  /** Set by a dedicated reader for list items (drive_modes, interior_features, smart_features, key_features). */
+  listKey?: string
+  /** Order within the list (1-based). */
+  position?: number
 }
 
 export type FileKind = 'pdf' | 'docx' | 'spreadsheet' | 'image'
@@ -45,6 +51,12 @@ export type Extraction = {
   chassisCandidates: Candidate[]
   /** 1-based PDF pages with no meaningful text (likely photos). */
   imageOnlyPages: number[]
+  /** A dedicated reader recognised the showroom's own layout (or embedded vehicle data). */
+  layout?: 'spec_sheet' | 'brochure' | 'embedded' | null
+  /** When set, only these pages' pictures are offered (one per page), e.g. a brochure's photo pages. */
+  photoPages?: number[] | null
+  /** Page whose picture is the cover (offered first). */
+  coverPage?: number | null
   /** Set when a spreadsheet is a multi-vehicle inventory list rather than one car's spec sheet. */
   inventorySheet: { rows: number } | null
 }
@@ -58,6 +70,8 @@ export type ImageCandidate = {
   width: number
   height: number
   origin: 'embedded' | 'page' | 'file'
+  /** A recognised brochure's cover or photo page: pre-selected in the review. */
+  role?: 'cover' | 'photo'
 }
 
 /** Facts from all files, grouped by what they describe. */
@@ -71,4 +85,7 @@ export type MergedFact = {
   /** One entry per distinct value; more than one entry for a 'value' fact = conflict. */
   values: { value: string; unit: string | null; valueAlt?: string | null; sources: SourceRef[]; raw: string }[]
   conflict: boolean
+  /** Catalogue field or list stated by a dedicated reader. */
+  fieldKey?: string
+  listKey?: string
 }

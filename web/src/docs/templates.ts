@@ -10,6 +10,8 @@
 
 const COMMON = String.raw`
 #let d = json("/data.json")
+// The vehicle data travels inside the PDF, so re-importing our own export is exact (Arabic included).
+#pdf.embed("/vehicle.json", relationship: "data", mime-type: "application/json", description: "Showroom vehicle data")
 #let LIB = (0.9052734375, 0.2119140625)
 #let CAL = (0.9521484375, 0.2685546875)
 #let NASKH = (1.069, 0.634)
@@ -50,7 +52,7 @@ export const SPEC_SHEET = COMMON + String.raw`
 #set text(font: ("Liberation Sans", "Noto Naskh Arabic"), fill: black)
 
 #let bar(fill, label) = block(width: 100%, height: 22.9pt, fill: fill, inset: (top: 4.4pt, left: 10.1pt),
-  lbox(14pt, 12pt, text(fill: white, weight: "bold", tracking: 3.05pt, label)))
+  lbox(14pt, 12pt, text(fill: white, weight: "bold", tracking: 2pt, kerning: false, label)))
 
 #let check = image(bytes("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'><path d='M1 5.6 L3.8 8.6 L9 1.4' fill='none' stroke='#B3001B' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/></svg>"), format: "svg", width: 7.4pt, height: 7.4pt)
 
@@ -128,7 +130,8 @@ export const SPEC_SHEET = COMMON + String.raw`
   lbox(11.45pt, 9.96pt)[#d.signature \ #d.legal]
   if d.disclaimer != "" {
     v(5.8pt)
-    lbox(9.3pt, 8.04pt, text(style: "italic", fill: rgb("#555"), d.disclaimer))
+    // 3 pt wider than the column (margin-right: -3pt) and word-spacing -0.11pt, as the kit.
+    lbox(9.3pt, 8.04pt, width: W + 3pt, text(style: "italic", fill: rgb("#555"), spacing: 100% - 0.11pt, d.disclaimer))
   }
 }
 
@@ -151,8 +154,12 @@ export const BROCHURE = COMMON + String.raw`
 #page(background: if d.cover != none { full(d.cover) }, {
   // The original's soft text shadow: a faint dark glow behind the title.
   place(top + left, dx: -40pt, dy: -40pt, rect(width: 760pt, height: 230pt, fill: gradient.radial(rgb(0, 0, 0, 30%), rgb(0, 0, 0, 0%), center: (20%, 35%), radius: 70%)))
-  place(top + left, dx: 7.2pt, dy: 12pt, block(width: 950pt,
-    lbox(64.8pt, 54pt, m: CAL, text(fill: rgb(d.cover_color), d.name + "\n" + d.year))))
+  // text-shadow: 0 0 14pt rgba(0,0,0,.4), 0 0 28pt rgba(0,0,0,.25). Chromium draws each
+  // shadow as its own copy of the text under the title; the blur itself is the glow above.
+  for shadow in (rgb(0, 0, 0, 25%), rgb(0, 0, 0, 40%), rgb(d.cover_color)) {
+    place(top + left, dx: 7.2pt, dy: 12pt, block(width: 950pt,
+      lbox(64.8pt, 54pt, m: CAL, text(fill: shadow, d.name + "\n" + d.year))))
+  }
 })
 
 #let en-col(secs) = for s in secs {

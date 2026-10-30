@@ -28,7 +28,7 @@ function sampleRows(): SpecRow[] {
   return rows
 }
 const car = { brand: 'Valtren', model: 'Orisa X5', year: 2024, trim_level: sample.identity.trim, listing_price: sample.identity.listing_price, doc_settings: {} }
-const company = { name: 'Fictional Motors', legal_name: null, signature_line: 'Management', disclaimer: null, currency: 'AED', doc_banner_path: null, doc_watermark_path: null }
+const company = { name: 'Fictional Motors', legal_name: null, signature_line: 'Management', disclaimer: null, currency: 'AED', doc_banner_path: null, doc_watermark_path: null, doc_banner_left_path: null, doc_banner_text_path: null }
 const paths = { cover: null, pages: [], banner: null, watermark: null }
 
 describe('vehicle → document data', () => {
@@ -39,6 +39,14 @@ describe('vehicle → document data', () => {
     expect(d.values).toEqual(sample.values)
     expect(d.lists).toEqual(sample.lists)
     expect(JSON.stringify(d)).not.toContain('Warranty')
+  })
+
+  it('passes the per-car banner settings (defaults: centred, no zoom)', () => {
+    const d = toDocData({ ...car, doc_settings: { banner: { pos: '30% 60%', zoom: 1.4 } } }, company, splitSpecs(sampleRows()),
+      { ...paths, bannerLeft: '/l.png', bannerText: '/t.png', bannerPhoto: '/p.jpg' })
+    expect(d.photos).toMatchObject({ banner: '/p.jpg', banner_pos: '30% 60%', banner_zoom: 1.4 })
+    expect(d.company).toMatchObject({ banner_left: '/l.png', banner_text: '/t.png' })
+    expect(toDocData(car, company, splitSpecs(sampleRows()), paths).photos).toMatchObject({ banner_pos: '50% 50%', banner_zoom: 1 })
   })
 })
 

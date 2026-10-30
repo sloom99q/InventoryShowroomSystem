@@ -13,8 +13,8 @@ const [dataPath, outDir = 'out'] = process.argv.slice(2);
 const data = JSON.parse(fs.readFileSync(dataPath, 'utf8'));
 const fields = JSON.parse(fs.readFileSync(path.join(kit, 'fields.json'), 'utf8'));
 const rel = (p) => (p ? pathToFileURL(path.resolve(path.dirname(dataPath), p)).href : p);
-if (data.company) for (const k of ['banner', 'watermark']) data.company[k] = rel(data.company[k]);
-if (data.photos) { data.photos.cover = rel(data.photos.cover); data.photos.pages = (data.photos.pages || []).map(rel); }
+if (data.company) for (const k of ['banner', 'watermark', 'banner_left', 'banner_text']) data.company[k] = rel(data.company[k]);
+if (data.photos) { data.photos.cover = rel(data.photos.cover); data.photos.banner = rel(data.photos.banner); data.photos.pages = (data.photos.pages || []).map(rel); }
 fs.mkdirSync(outDir, { recursive: true });
 const opts = { assetBase: pathToFileURL(kit).href + '/' };
 

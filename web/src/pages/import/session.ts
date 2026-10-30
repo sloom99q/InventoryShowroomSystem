@@ -199,7 +199,8 @@ export function placeFacts(
   const push = (map: Map<string, BiCandidate[]>, key: string, v: MergedFact['values'][number]) => {
     const en = [v.value, v.unit].filter(Boolean).join(' ').trim()
     const list = map.get(key) ?? []
-    const hit = list.find((c) => normV(c.en) === normV(en))
+    // Arabic-only list items (no English) are told apart by their Arabic.
+    const hit = list.find((c) => (en ? normV(c.en) === normV(en) : !c.en && normV(c.ar ?? '') === normV(v.valueAlt ?? '')))
     if (hit) {
       for (const s of v.sources) if (!hit.sources.some((x) => x.fileKey === s.fileKey && x.page === s.page)) hit.sources.push(s)
       hit.ar ??= v.valueAlt ?? null
@@ -207,6 +208,9 @@ export function placeFacts(
     map.set(key, list)
   }
   for (const m of merged) {
+    // A dedicated reader already knows where the value goes.
+    if (m.listKey) { for (const v of m.values) push(lists, m.listKey, v); continue }
+    if (m.fieldKey && !vehicleColumnKeys.has(m.fieldKey)) { for (const v of m.values) push(fields, m.fieldKey, v); continue }
     if (m.core && m.core !== 'document_date') continue // vehicle columns, title, chassis: handled elsewhere
     if (m.kind === 'item') {
       const list = matchList(m.section) ?? matchList(m.label)

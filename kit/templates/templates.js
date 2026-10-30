@@ -32,6 +32,21 @@ function fontFaces(base) {
   ].join('\n');
 }
 
+
+// Header banner. If the company has the layered banner (banner_left + banner_text) and the car has a
+// banner photo (or a cover photo), the right panel shows THIS car, darkened, behind the slogans.
+// banner_photo_pos: CSS object-position, e.g. "50% 40%"; banner_photo_zoom: 1 = fit, 1.6 = closer.
+function bannerHTML(data) {
+  const c = data.company || {}, ph = data.photos || {};
+  const photo = ph.banner || ph.cover;
+  if (c.banner_left && c.banner_text && photo) {
+    const pos = esc(ph.banner_pos || '50% 50%'), zoom = Number(ph.banner_zoom || 1);
+    return `<div class="bn"><div class="ph"><img src="${esc(photo)}" style="object-position:${pos};transform:scale(${zoom});transform-origin:${pos}"><div class="dk"></div></div>
+      <div class="dv"></div><img class="ly" src="${esc(c.banner_text)}"><img class="ly" src="${esc(c.banner_left)}"></div>`;
+  }
+  return c.banner ? `<img class="banner" src="${esc(c.banner)}">` : '';
+}
+
 /* ------------------------------------------------------------------ SPEC SHEET (A4) */
 const CHECK = '<svg viewBox="0 0 10 10"><path d="M1 5.6 L3.8 8.6 L9 1.4" fill="none" stroke="#B3001B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 export function specSheetHTML(data, fields, opts = {}) {
@@ -42,6 +57,9 @@ export function specSheetHTML(data, fields, opts = {}) {
     .map((r) => {
       let v = val(data, r.value);
       if (r.append) { const a = val(data, r.append); if (a) v = v ? v + r.joiner + a : a; }
+      if (v && r.label_if && new RegExp(r.label_if.pattern, 'i').test(val(data, r.label_if.field))) {
+        return { ...r, label_en: r.label_if.label_en, label_ar: r.label_if.label_ar, v };
+      }
       return v ? { ...r, v } : null;
     })
     .filter(Boolean);
@@ -60,6 +78,12 @@ ${fontFaces(base)}
 html,body{width:595.32pt;height:841.92pt}
 body{font-family:'DocSans','DocAr',sans-serif;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact;position:relative;overflow:hidden}
 .banner{position:absolute;top:11.5pt;left:0;width:595.32pt;height:114pt;object-fit:cover;display:block}
+.bn{position:absolute;top:11.5pt;left:0;width:595.32pt;height:114pt;overflow:hidden}
+.bn .ph{position:absolute;left:47.9%;top:0;width:52.1%;height:97.1%;overflow:hidden;clip-path:polygon(16.3% 0,100% 0,100% 100%,0 100%)}
+.bn .ph img{width:100%;height:100%;object-fit:cover}
+.bn .dk{position:absolute;inset:0;background:rgba(8,10,12,.68)}
+.bn .dv{position:absolute;left:85.67%;top:0;width:0.13%;height:74%;background:rgba(255,255,255,.42)}
+.bn .ly{position:absolute;inset:0;width:100%;height:100%}
 .wrap{position:absolute;top:133.3pt;left:42.5pt;width:510.5pt}
 .topline{display:flex;justify-content:space-between;font-size:9pt;line-height:13pt}
 .kicker{font-weight:700;color:#555;letter-spacing:3pt}
@@ -71,7 +95,7 @@ body{font-family:'DocSans','DocAr',sans-serif;color:#000;-webkit-print-color-adj
 .price .l b{display:block;font-size:14.04pt;line-height:16pt;letter-spacing:1.6pt}
 .price .l span{display:block;font-size:8.04pt;line-height:9.2pt;color:#cfcfcf}
 .price .r{flex:1;background:#B3001B;color:#fff;font-weight:700;font-size:24pt;text-align:right;padding:6.3pt 15pt 0 0;line-height:27pt}
-.bar{height:22.9pt;color:#fff;font-weight:700;font-size:12pt;letter-spacing:3.05pt;padding:4.4pt 0 0 10.1pt;line-height:14pt}
+.bar{height:22.9pt;color:#fff;font-weight:700;font-size:12pt;letter-spacing:2pt;font-kerning:none;padding:4.4pt 0 0 10.1pt;line-height:14pt}
 .bar.red{background:#B3001B;margin-top:23.0pt}
 .bar.dark{background:#151515;margin-top:20.3pt}
 table{width:510.5pt;border-collapse:collapse;table-layout:fixed}
@@ -87,9 +111,9 @@ td.a{width:123.4pt;color:#1a1a1a;text-align:right;direction:rtl;padding-left:4pt
 .kf li{font-size:9.96pt;line-height:16.4pt;padding-left:21pt;position:relative;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .kf li svg{position:absolute;left:6pt;top:4.6pt;width:7.4pt;height:7.4pt}
 .foot{margin-top:34.8pt;font-size:9.96pt;line-height:11.45pt}
-.disc{margin-top:5.8pt;font-size:8.04pt;line-height:9.3pt;font-style:italic;color:#555}
+.disc{margin-top:5.8pt;margin-right:-3pt;font-size:8.04pt;line-height:9.3pt;font-style:italic;color:#555;word-spacing:-0.11pt}
 </style></head><body>
-${c.banner ? `<img class="banner" src="${esc(c.banner)}">` : ''}
+${bannerHTML(data)}
 <div class="wrap">
   <div class="topline"><span class="kicker">VEHICLE SPEC SHEET</span><span>Date: ${esc(fmtDate(data.doc_date))}</span></div>
   <div class="title" data-fit>${esc(name)}&nbsp; <span class="yr">${esc(id.year)}</span></div>

@@ -65,14 +65,14 @@ isOneToOne: false
                   ]
                 },"companies": {
                   Row: {
-                    "accent_color": string,"created_at": string,"currency": string,"default_locale": string,"disclaimer": string | null,"doc_banner_path": string | null,"doc_watermark_path": string | null,"id": string,"known_brands": (string)[],"legal_name": string | null,"logo_dark_path": string | null,"logo_path": string | null,"name": string,"sidebar_color": string,"signature_line": string,"theme_mode": string,"timezone": string
+                    "accent_color": string,"created_at": string,"currency": string,"default_locale": string,"disclaimer": string | null,"doc_banner_left_path": string | null,"doc_banner_path": string | null,"doc_banner_text_path": string | null,"doc_watermark_path": string | null,"id": string,"known_brands": (string)[],"legal_name": string | null,"logo_dark_path": string | null,"logo_path": string | null,"name": string,"sidebar_color": string,"signature_line": string,"theme_mode": string,"timezone": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "accent_color"?: string,"created_at"?: string,"currency"?: string,"default_locale"?: string,"disclaimer"?: string | null,"doc_banner_path"?: string | null,"doc_watermark_path"?: string | null,"id"?: string,"known_brands"?: (string)[],"legal_name"?: string | null,"logo_dark_path"?: string | null,"logo_path"?: string | null,"name": string,"sidebar_color"?: string,"signature_line"?: string,"theme_mode"?: string,"timezone"?: string
+                    "accent_color"?: string,"created_at"?: string,"currency"?: string,"default_locale"?: string,"disclaimer"?: string | null,"doc_banner_left_path"?: string | null,"doc_banner_path"?: string | null,"doc_banner_text_path"?: string | null,"doc_watermark_path"?: string | null,"id"?: string,"known_brands"?: (string)[],"legal_name"?: string | null,"logo_dark_path"?: string | null,"logo_path"?: string | null,"name": string,"sidebar_color"?: string,"signature_line"?: string,"theme_mode"?: string,"timezone"?: string
                   }
                   Update: {
-                    "accent_color"?: string,"created_at"?: string,"currency"?: string,"default_locale"?: string,"disclaimer"?: string | null,"doc_banner_path"?: string | null,"doc_watermark_path"?: string | null,"id"?: string,"known_brands"?: (string)[],"legal_name"?: string | null,"logo_dark_path"?: string | null,"logo_path"?: string | null,"name"?: string,"sidebar_color"?: string,"signature_line"?: string,"theme_mode"?: string,"timezone"?: string
+                    "accent_color"?: string,"created_at"?: string,"currency"?: string,"default_locale"?: string,"disclaimer"?: string | null,"doc_banner_left_path"?: string | null,"doc_banner_path"?: string | null,"doc_banner_text_path"?: string | null,"doc_watermark_path"?: string | null,"id"?: string,"known_brands"?: (string)[],"legal_name"?: string | null,"logo_dark_path"?: string | null,"logo_path"?: string | null,"name"?: string,"sidebar_color"?: string,"signature_line"?: string,"theme_mode"?: string,"timezone"?: string
                   }
                   Relationships: [
                     

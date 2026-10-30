@@ -83,7 +83,8 @@ function reverseRuns(tokens: Token[], isRun: (t: Token) => boolean): Token[] {
       continue
     }
     let j = i
-    while (j + 1 < tokens.length && (isRun(tokens[j + 1]) || (tokens[j + 1].t === ' ' && j + 2 < tokens.length && isRun(tokens[j + 2])))) j++
+    // A space or a joiner between two words of the run keeps it one run ("Multi-Link", "km/h").
+    while (j + 1 < tokens.length && (isRun(tokens[j + 1]) || (/^[ \-‐–/.'’&+]$/.test(tokens[j + 1].t) && j + 2 < tokens.length && isRun(tokens[j + 2])))) j++
     out.push(...tokens.slice(i, j + 1).reverse())
     i = j + 1
   }

@@ -1,0 +1,34 @@
+{
+  "_about": "What a correct import of '14_VOYAH_FREE_Spec_Sheet.pdf' must produce. Used ONLY by the round-trip test. Never copy these values into app code.",
+  "doc_date": "2026-10-19",
+  "identity": {
+    "brand": "VOYAH", "model": "FREE", "year": "2025", "trim": "318 AWD Apollo Tech",
+    "description": "Premium Range-Extended Electric SUV",
+    "regional_specs": { "en": "Chinese specs" },
+    "listing_price": 140000, "currency": "AED"
+  },
+  "values": {
+    "powertrain_type": { "en": "Range-extended electric (EREV), dual motors" },
+    "engine": { "en": "1.5L turbo petrol generator (charges battery only)" },
+    "total_output": { "en": "360 kW (483 hp)" },
+    "max_torque": { "en": "720 Nm" },
+    "acceleration": { "en": "4.5 seconds" },
+    "top_speed": { "en": "200 km/h" },
+    "drive": { "en": "All-wheel drive" },
+    "battery": { "en": "43 kWh lithium-ion" },
+    "range": { "en": "Up to 259 km electric · 1,357 km total (CLTC)" },
+    "seating": { "en": "5 seats" },
+    "dimensions": { "en": "4,905 × 1,950 × 1,645 mm" },
+    "wheelbase": { "en": "2,960 mm" },
+    "wheels": { "en": "20-inch alloy, Michelin 255/45 R20" }
+  },
+  "lists": {
+    "key_features": [
+      "Electric drive with up to 1,357 km total range", "Triple 12.3\" screens incl. passenger display",
+      "Leather & Alcantara upholstery", "100-colour ambient lighting & fragrance system",
+      "Apollo L2 driver assist & adaptive cruise", "Adaptive air suspension (up to +100 mm)",
+      "Heated, ventilated & massage seats", "Opening panoramic sunroof",
+      "Rear climate vents with touch control", "360° camera & blind-spot monitoring"
+    ]
+  }
+}

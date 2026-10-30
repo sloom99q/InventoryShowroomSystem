@@ -50,7 +50,7 @@ test('generates the spec sheet and brochure for the fictional car', async ({ pag
 
   // Company document assets (fictional banner and watermark).
   await page.goto('/settings')
-  await page.getByLabel('Spec sheet header banner').setInputFiles(path.join(FX, 'doc-banner.png'))
+  await page.getByLabel('Fallback banner').setInputFiles(path.join(FX, 'doc-banner.png'))
   await page.getByLabel('Brochure watermark').setInputFiles(path.join(FX, 'watermark.png'))
   await page.getByLabel('Company legal name').fill('Northwind Auto House LLC')
   await page.getByLabel('Disclaimer').fill('Specifications are indicative and may change without notice. Images are for illustration only.')

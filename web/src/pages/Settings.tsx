@@ -15,7 +15,7 @@ import { friendlyError, supabase } from '@/lib/supabase'
 import { applyBranding, chromeIsDark, contrast, inkOn, PRESETS } from '@/lib/theme'
 import type { Company } from '@/lib/types'
 
-type Draft = Pick<Company, 'name' | 'accent_color' | 'sidebar_color' | 'theme_mode' | 'logo_path' | 'logo_dark_path' | 'default_locale' | 'known_brands' | 'doc_banner_path' | 'doc_watermark_path' | 'legal_name' | 'signature_line' | 'disclaimer'>
+type Draft = Pick<Company, 'name' | 'accent_color' | 'sidebar_color' | 'theme_mode' | 'logo_path' | 'logo_dark_path' | 'default_locale' | 'known_brands' | 'doc_banner_path' | 'doc_watermark_path' | 'doc_banner_left_path' | 'doc_banner_text_path' | 'legal_name' | 'signature_line' | 'disclaimer'>
 
 function ColorField({ label, hint, value, onChange, warning }: { label: string; hint?: string; value: string; onChange: (v: string) => void; warning?: string }) {
   const [text, setText] = useState(value)
@@ -83,6 +83,7 @@ export default function Settings() {
     logo_path: company.logo_path, logo_dark_path: company.logo_dark_path, default_locale: company.default_locale,
     known_brands: company.known_brands ?? [],
     doc_banner_path: company.doc_banner_path, doc_watermark_path: company.doc_watermark_path,
+    doc_banner_left_path: company.doc_banner_left_path, doc_banner_text_path: company.doc_banner_text_path,
     legal_name: company.legal_name, signature_line: company.signature_line, disclaimer: company.disclaimer,
   }
   const [d, setD] = useState<Draft>(initial)
@@ -136,6 +137,8 @@ export default function Settings() {
             <PanelHeader title={t('salesdocs:settings.title')} />
             <div className="space-y-5 p-5">
               <p className="text-[13px] text-ink-2">{t('salesdocs:settings.hint')}</p>
+              <LogoField label={t('salesdocs:settings.bannerLeft')} hint={t('salesdocs:settings.bannerLeftHint')} path={d.doc_banner_left_path} companyId={company.id} onChange={(p) => set({ doc_banner_left_path: p })} wide />
+              <LogoField label={t('salesdocs:settings.bannerText')} hint={t('salesdocs:settings.bannerTextHint')} path={d.doc_banner_text_path} companyId={company.id} onChange={(p) => set({ doc_banner_text_path: p })} wide dark />
               <LogoField label={t('salesdocs:settings.banner')} hint={t('salesdocs:settings.bannerHint')} path={d.doc_banner_path} companyId={company.id} onChange={(p) => set({ doc_banner_path: p })} wide />
               <LogoField label={t('salesdocs:settings.watermark')} hint={t('salesdocs:settings.watermarkHint')} path={d.doc_watermark_path} companyId={company.id} onChange={(p) => set({ doc_watermark_path: p })} />
               <div className="grid gap-4 sm:grid-cols-2">

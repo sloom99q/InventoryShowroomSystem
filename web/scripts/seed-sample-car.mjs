@@ -37,9 +37,12 @@ async function upload(path, bytes, contentType) {
 }
 const banner = await upload(`${company.id}/branding/sample-spec-header-banner.jpg`, read('assets/spec-header-banner.jpg'), 'image/jpeg')
 const watermark = await upload(`${company.id}/branding/sample-watermark-logo.png`, read('assets/watermark-logo.png'), 'image/png')
+const bannerLeft = await upload(`${company.id}/branding/sample-banner-left.png`, read('assets/banner-left.png'), 'image/png')
+const bannerText = await upload(`${company.id}/branding/sample-banner-text.png`, read('assets/banner-text.png'), 'image/png')
 must(await db.from('companies').update({
   legal_name: sample.company.legal_name, signature_line: sample.company.signature,
   disclaimer: sample.company.disclaimer, doc_banner_path: banner, doc_watermark_path: watermark,
+  doc_banner_left_path: bannerLeft, doc_banner_text_path: bannerText,
 }).eq('id', company.id))
 
 // ---- Vehicle -------------------------------------------------------------------
@@ -99,7 +102,13 @@ async function photo(rel, type) {
 const coverId = await photo(sample.photos.cover, 'current')
 const photoIds = []
 for (const p of sample.photos.pages) photoIds.push(await photo(p, 'arrival'))
-must(await db.from('vehicles').update({ doc_settings: { brochure: { coverId, photoIds }, docDate: sample.doc_date } }).eq('id', vid))
+// Banner photo: the sample names one of its photo pages.
+const bannerId = photoIds[sample.photos.pages.indexOf(sample.photos.banner)] ?? coverId
+must(await db.from('vehicles').update({ doc_settings: {
+  brochure: { coverId, photoIds },
+  banner: { photoId: bannerId, pos: sample.photos.banner_pos ?? '50% 50%', zoom: sample.photos.banner_zoom ?? 1 },
+  docDate: sample.doc_date,
+} }).eq('id', vid))
 
 // ---- A little history so the header looks lived-in (like the mockup) ---------------
 const acc = must(await db.from('accessories').select('id').eq('vehicle_id', vid))

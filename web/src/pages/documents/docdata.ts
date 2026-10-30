@@ -9,11 +9,17 @@ import type { Bi, DocData, RenderResult } from '@/docs/types'
 type T = Database['public']['Tables']
 export type Img = T['vehicle_images']['Row']
 export type VehicleLike = Pick<T['vehicles']['Row'], 'brand' | 'model' | 'year' | 'trim_level' | 'listing_price' | 'doc_settings'>
-export type CompanyLike = Pick<T['companies']['Row'], 'name' | 'legal_name' | 'signature_line' | 'disclaimer' | 'currency' | 'doc_banner_path' | 'doc_watermark_path'>
+export type CompanyLike = Pick<T['companies']['Row'], 'name' | 'legal_name' | 'signature_line' | 'disclaimer' | 'currency' | 'doc_banner_path' | 'doc_watermark_path' | 'doc_banner_left_path' | 'doc_banner_text_path'>
 export type DocKind = 'specsheet' | 'brochure'
 
 /** Saved per vehicle: only the brochure photos are chosen by hand. Rows and sections come from fields.json. */
-export type DocSettings = { brochure?: { coverId?: string | null; photoIds?: string[] }; /** yyyy-mm-dd printed on the spec sheet; default: today. */ docDate?: string }
+export type DocSettings = {
+  brochure?: { coverId?: string | null; photoIds?: string[] }
+  /** Spec sheet header banner: which photo (default: the brochure cover), CSS object-position, zoom. */
+  banner?: { photoId?: string | null; pos?: string; zoom?: number }
+  /** yyyy-mm-dd printed on the spec sheet; default: today. */
+  docDate?: string
+}
 
 export function readSettings(v: Pick<VehicleLike, 'doc_settings'>): DocSettings {
   const s = v.doc_settings
@@ -34,6 +40,13 @@ export function brochurePhotos(images: Img[], settings: DocSettings) {
   return { photos, cover }
 }
 
+/** The photo behind the spec sheet banner: the chosen one, else the brochure cover. */
+export function bannerPhoto(images: Img[], settings: DocSettings) {
+  const usable = usablePhotos(images)
+  const chosen = settings.banner?.photoId ? usable.find((i) => i.id === settings.banner!.photoId) : null
+  return chosen ?? brochurePhotos(images, settings).cover
+}
+
 const bi = (en?: string | null, ar?: string | null): Bi => ({ ...(en?.trim() ? { en: en.trim() } : {}), ...(ar?.trim() ? { ar: ar.trim() } : {}) })
 
 /** yyyy-mm-dd in UAE time. */
@@ -45,7 +58,7 @@ export function toDocData(
   v: VehicleLike,
   company: CompanyLike,
   data: VehicleData,
-  paths: { cover: string | null; pages: string[]; banner: string | null; watermark: string | null },
+  paths: { cover: string | null; pages: string[]; banner: string | null; watermark: string | null; bannerLeft?: string | null; bannerText?: string | null; bannerPhoto?: string | null },
   now = new Date(),
 ): DocData {
   const field = (k: string) => data.fields.get(k)
@@ -74,9 +87,17 @@ export function toDocData(
       smart_features: list('smart_features'),
       key_features: (data.lists.key_features ?? []).map((r) => r.value_en?.trim() ?? '').filter(Boolean).slice(0, FIELDS.key_features.max),
     },
-    photos: { cover: paths.cover, pages: paths.pages },
+    photos: {
+      cover: paths.cover,
+      pages: paths.pages,
+      banner: paths.bannerPhoto ?? null,
+      banner_pos: readSettings(v).banner?.pos || '50% 50%',
+      banner_zoom: readSettings(v).banner?.zoom || 1,
+    },
     company: {
       banner: paths.banner,
+      banner_left: paths.bannerLeft ?? null,
+      banner_text: paths.bannerText ?? null,
       watermark: paths.watermark,
       signature: company.signature_line || 'Management',
       legal_name: company.legal_name || company.name,
@@ -174,6 +195,18 @@ export async function gatherFiles(kind: DocKind, company: CompanyLike, images: I
     return vfs
   }
   const banner = kind === 'specsheet' ? await put(company.doc_banner_path, 'asset', 'assets/banner') : null
+  // Layered banner: both company layers plus this car's photo; otherwise the fallback banner is used.
+  let bannerLeft: string | null = null
+  let bannerText: string | null = null
+  let bannerPhotoPath: string | null = null
+  if (kind === 'specsheet' && company.doc_banner_left_path && company.doc_banner_text_path) {
+    const photo = bannerPhoto(images, settings)
+    if (photo) {
+      bannerLeft = await put(company.doc_banner_left_path, 'asset', 'assets/banner-left')
+      bannerText = await put(company.doc_banner_text_path, 'asset', 'assets/banner-text')
+      bannerPhotoPath = await put(photo.storage_path, 'photo', `photos/${photo.id}`)
+    }
+  }
   const watermark = kind === 'brochure' ? await put(company.doc_watermark_path, 'asset', 'assets/watermark') : null
   let cover: string | null = null
   const pages: string[] = []
@@ -185,7 +218,7 @@ export async function gatherFiles(kind: DocKind, company: CompanyLike, images: I
       if (path) pages.push(path)
     }
   }
-  return { files, paths: { cover, pages, banner, watermark } }
+  return { files, paths: { cover, pages, banner, watermark, bannerLeft, bannerText, bannerPhoto: bannerPhotoPath } }
 }
 
 export async function photoSizes(images: Img[]) {

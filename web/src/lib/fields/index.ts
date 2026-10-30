@@ -13,7 +13,15 @@ export type SectionDef = {
   list?: string
   list_hint?: string
 }
-export type SpecSheetRow = { label_en: string; label_ar: string; value: string; append?: string; joiner?: string }
+export type SpecSheetRow = {
+  label_en: string
+  label_ar: string
+  value: string
+  append?: string
+  joiner?: string
+  /** Print alternative labels when another field matches (e.g. "Range extender" for an EREV). */
+  label_if?: { field: string; pattern: string; label_en: string; label_ar: string }
+}
 
 export const FIELDS = catalogue as unknown as {
   identity: FieldDef[]

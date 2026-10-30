@@ -24,9 +24,22 @@ export type DocData = {
     key_features?: string[]
   }
   /** Paths inside the compiler's virtual file system (the renderer maps the bytes). */
-  photos?: { cover?: string | null; pages?: string[] }
-  company?: {
+  photos?: {
+    cover?: string | null
+    pages?: string[]
+    /** Photo shown in the spec sheet's header banner (defaults to the cover). */
     banner?: string | null
+    /** CSS object-position, e.g. "50% 40%". Default "50% 50%". */
+    banner_pos?: string
+    /** 1 = fit, 1.6 = closer. Default 1. */
+    banner_zoom?: number
+  }
+  company?: {
+    /** Fallback full banner image, used when the layered banner can't be built. */
+    banner?: string | null
+    /** Layered banner: logo side (photo area transparent) and the slogans layer. */
+    banner_left?: string | null
+    banner_text?: string | null
     watermark?: string | null
     signature?: string
     legal_name?: string

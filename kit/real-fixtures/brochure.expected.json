@@ -1,0 +1,40 @@
+{
+  "_about": "What a correct import of 'VOYAH FREE.pdf' (20-page brochure) must produce. Used ONLY by the round-trip test; never copy values into app code. English values are exactly what the file says (including its own typos/truncations). Arabic: the file's text layer is damaged (Word/PowerPoint export), so Arabic is checked with 'ar_contains': the stored Arabic value must contain every listed token after normalisation (NFKC + lam-alef order fix).",
+  "identity": { "brand": "VOYAH", "model": "FREE", "year": "2025" },
+  "values": {
+    "engine":            { "en": "1.5L Turbocharged Petrol Engine (Range Extender)", "ar_contains": ["1.5", "تيربو"] },
+    "electric_motors":   { "en": "Dual Electric Motors (Front + Rear)", "ar_contains": ["محركان", "كهربائيان"] },
+    "total_output":      { "en": "Approximately 360 kW / 490 HP", "ar_contains": ["360", "490"] },
+    "max_torque":        { "en": "720 Nm", "ar_contains": ["720"] },
+    "battery":           { "en": "43 kWh (depending on version)", "ar_contains": ["43"] },
+    "drive":             { "en": "AWD (All-Wheel Drive)", "ar_contains": ["رباعي"] },
+    "acceleration":      { "en": "Approximately 4.5 seconds", "ar_contains": ["4.5"] },
+    "top_speed":         { "en": "200 km/h", "ar_contains": ["200"] },
+    "range":             { "en": "Up to 1,357 km (CLTC)", "ar_contains": ["1,357", "CLTC"] },
+    "front_suspension":  { "en": "Double Wishbone Independent Suspension", "ar_contains": ["Double Wishbone"] },
+    "rear_suspension":   { "en": "Multi-Link Independent Suspension", "ar_contains": ["Multi-Link"] },
+    "suspension_system": { "en": "Adaptive Air Suspension with adjustable ride height (depending on trim", "ar_contains": ["100"] },
+    "drivetrain":        { "en": "Intelligent All-Wheel Dri", "ar_contains": ["رباعي"] },
+    "fuel_consumption":  { "en": "Approximately 0.6 L/100 km", "ar_contains": ["0.6", "100"] },
+    "fuel_tank":         { "en": "Approximately 56 Liters", "ar_contains": ["56"] },
+    "powertrain_type":   { "en": "Extended-Range Electric Vehicle (EREV)", "ar_contains": ["بمدى ممتد"] },
+    "seating":           { "en": "5-Seater Luxury MPV", "ar_contains": ["مقاعد"] },
+    "wheelbase":         { "en": "2960mm", "ar_contains": ["2960"] }
+  },
+  "lists": {
+    "drive_modes_en": ["Eco", "Comfort", "Performance", "Sport", "Snow", "Individual", "Custom"],
+    "interior_features_en": ["Triple 12.3-inch Displays", "Panoramic Sunroof", "Electrically Adjustable Front Seats with Heating, Ventilation, and Massage", "Premium Dynaudio Sound System", "Multi-Color Ambient Lighting", "Automatic Climate Control"],
+    "interior_features_ar_count": 6,
+    "smart_features_en": ["Adaptive Cruise Control (ACC)", "Lane Keeping Assist (LKA)", "Lane Departure Warning (LDW)", "Automatic Emergency Braking (AEB)", "Forward Collision Warning (FCW)", "360° Surround-View Camera", "Intelligent Parking Assistance", "Blind-Spot Monitoring (BSM)"],
+    "smart_features_ar_count": 9
+  },
+  "photos": { "pages_with_photos": 17, "cover_photo_from_page": 1 },
+  "notes": [
+    "Interior: the Arabic column has 'seating' and 'wheelbase' as its first two bullets and then 6 feature bullets — pair English and Arabic bullets by position within each section when the counts match.",
+    "Smart driving: English has 8 items, Arabic has 9 (an extra night-vision item). When counts differ, pair what matches by order and keep the extra Arabic item as an Arabic-only list item. Never drop it.",
+    "Lines without a leading bullet are continuations of the previous bullet (wrapped text). Join them.",
+    "Section headings are matched case- and whitespace-insensitively ('SUSPENSION  & Chassis' = 'SUSPENSION & CHASSIS').",
+    "'Claimed Fuel :' — a space before the colon is still a label separator.",
+    "Page 1: the vehicle name and the year are on separate lines; the year is the 4-digit line."
+  ]
+}

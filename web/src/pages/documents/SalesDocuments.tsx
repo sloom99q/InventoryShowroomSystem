@@ -17,7 +17,7 @@ import { useSignedUrl } from '@/lib/files'
 import { friendlyError } from '@/lib/supabase'
 import type { RenderResult } from '@/docs/types'
 import { labelFor } from '@/lib/fields'
-import { brochurePhotos, type DocKind, type DocSettings, gatherFiles, type Img, inspect, type Issue, photoSizes, readSettings, toDocData, usablePhotos } from './docdata'
+import { bannerPhoto, brochurePhotos, type DocKind, type DocSettings, gatherFiles, type Img, inspect, type Issue, photoSizes, readSettings, toDocData, usablePhotos } from './docdata'
 import { saveExport } from './save'
 
 const DOCS: { kind: DocKind; icon: typeof FileText }[] = [
@@ -60,7 +60,7 @@ export default function SalesDocuments() {
   const [sizes, setSizes] = useState<Record<string, { width: number; height: number } | null>>({})
   const renderKey = JSON.stringify([kind, settings, (data?.rows ?? []).map((s) => [s.id, s.field_key, s.position, s.value_en, s.value_ar]),
     images.map((i) => i.id), v && [v.brand, v.model, v.year, v.trim_level, v.listing_price],
-    [company.legal_name, company.signature_line, company.disclaimer, company.doc_banner_path, company.doc_watermark_path, company.currency]])
+    [company.legal_name, company.signature_line, company.disclaimer, company.doc_banner_path, company.doc_watermark_path, company.doc_banner_left_path, company.doc_banner_text_path, company.currency]])
 
   useEffect(() => {
     if (!v || !data || imagesQ.isLoading) return
@@ -176,6 +176,9 @@ export default function SalesDocuments() {
             el.classList.add('ring-2', 'ring-warn')
             setTimeout(() => el.classList.remove('ring-2', 'ring-warn'), 1600)
           }} />
+          {kind === 'specsheet' && (
+            <BannerControl images={images} settings={settings} change={change} hasLayers={!!(company.doc_banner_left_path && company.doc_banner_text_path)} />
+          )}
           {kind === 'specsheet' && (
             <Panel className="p-4">
               <label className="block text-[13px] font-medium text-ink-2" htmlFor="doc-date">{t('choose.docDate')}</label>
@@ -365,6 +368,69 @@ function BrochureChoices({ images, settings, change, sizes }: {
           </span>
         )} />
     </>
+  )
+}
+
+/** Spec sheet banner: which photo, its focus point (drag) and zoom. Saved per car. */
+function BannerControl({ images, settings, change, hasLayers }: { images: Img[]; settings: DocSettings; change: (s: DocSettings) => void; hasLayers: boolean }) {
+  const { t } = useTranslation('salesdocs')
+  const usable = usablePhotos(images)
+  const photo = bannerPhoto(images, settings)
+  const b = settings.banner ?? {}
+  const pos = b.pos || '50% 50%'
+  const [px, py] = pos.split(' ').map((v) => parseFloat(v))
+  const zoom = b.zoom || 1
+  const url = useSignedUrl(photo?.thumbnail_path ?? photo?.storage_path)
+  const set = (patch: Partial<NonNullable<DocSettings['banner']>>) => change({ ...settings, banner: { ...b, ...patch } })
+  const fromPointer = (e: React.PointerEvent<HTMLDivElement>) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    const x = Math.round(Math.min(100, Math.max(0, ((e.clientX - r.left) / r.width) * 100)))
+    const y = Math.round(Math.min(100, Math.max(0, ((e.clientY - r.top) / r.height) * 100)))
+    set({ pos: `${x}% ${y}%` })
+  }
+  return (
+    <Panel id="banner-photo">
+      <PanelHeader title={t('choose.banner')}>
+        {(b.pos || b.zoom || b.photoId) && <Button size="sm" variant="ghost" onClick={() => change({ ...settings, banner: undefined })}>{t('choose.bannerReset')}</Button>}
+      </PanelHeader>
+      {!hasLayers ? <p className="px-4 py-3 text-[12.5px] text-ink-3">{t('choose.bannerNeedsLayers')}</p> : !usable.length ? (
+        <p className="px-4 py-3 text-[13px] text-ink-3">{t('choose.noPhotos')}</p>
+      ) : (
+        <div className="space-y-3 p-3">
+          <div className="flex flex-wrap gap-2">
+            {usable.map((i) => (
+              <button key={i.id} onClick={() => set({ photoId: i.id })} aria-pressed={photo?.id === i.id} title={i.original_filename}
+                className={cn('cursor-pointer rounded-sm p-0.5', photo?.id === i.id ? 'ring-2 ring-ink-2' : 'opacity-70 hover:opacity-100')}>
+                <PhotoThumb img={i} />
+              </button>
+            ))}
+          </div>
+          {photo && url.data && (
+            <div>
+              <div className="relative cursor-crosshair touch-none select-none overflow-hidden rounded-sm bg-raised" role="slider" aria-label={t('choose.bannerHint')}
+                aria-valuetext={pos} tabIndex={0}
+                onPointerDown={(e) => { e.currentTarget.setPointerCapture(e.pointerId); fromPointer(e) }}
+                onPointerMove={(e) => { if (e.buttons) fromPointer(e) }}
+                onKeyDown={(e) => {
+                  const step = e.shiftKey ? 10 : 2
+                  const d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] }[e.key]
+                  if (d) { e.preventDefault(); set({ pos: `${Math.min(100, Math.max(0, px + d[0]))}% ${Math.min(100, Math.max(0, py + d[1]))}%` }) }
+                }}>
+                <img src={url.data} alt="" draggable={false} className="block w-full" />
+                <span className="pointer-events-none absolute size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,.6)]"
+                  style={{ left: `${px}%`, top: `${py}%` }} />
+              </div>
+              <p className="mt-1 text-[12px] text-ink-3">{t('choose.bannerHint')}</p>
+            </div>
+          )}
+          <label className="flex items-center gap-3 text-[13px] text-ink-2">
+            {t('choose.bannerZoom')}
+            <input type="range" min={1} max={2.5} step={0.05} value={zoom} onChange={(e) => set({ zoom: Number(e.target.value) })} className="flex-1 accent-[var(--brand)]" />
+            <span className="tnum w-10 text-end" dir="ltr">{zoom.toFixed(2)}×</span>
+          </label>
+        </div>
+      )}
+    </Panel>
   )
 }
 

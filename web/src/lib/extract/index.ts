@@ -93,7 +93,7 @@ export async function extractFile(file: File, fileKey: string, opts: { pdfjs?: P
       const extraction = await extractPdf(data, pdfjs, fileKey)
       let images: ImageCandidate[] = []
       try {
-        images = await pdfImageCandidates(data, pdfjs, fileKey, extraction.imageOnlyPages)
+        images = await pdfImageCandidates(data, pdfjs, fileKey, extraction.imageOnlyPages, extraction.photoPages ?? null, extraction.coverPage ?? null)
       } catch {
         /* pictures are optional; text still counts */
       }
@@ -157,6 +157,12 @@ function labelGroups(facts: Fact[]) {
 
 const isArabic = (s: string) => /[؀-ۿ]/.test(s)
 
+/** Two wordings of the same value: "Approximately 4.5 seconds" ≈ "4.5 seconds", "2,960 mm" ≈ "2960mm". */
+export function sameText(s: string) {
+  return s.normalize('NFKC').toLowerCase().replace(/^\s*(approximately|approx\.?|about|around|circa|~)\s+/u, '')
+    .replace(/[\s,]+/g, '').replace(/[.。]+$/u, '')
+}
+
 /**
  * Merge facts from several files. Same field + same value → one value with
  * every source. Same field + different values → conflict (never resolved
@@ -167,7 +173,7 @@ export function mergeFacts(perFile: { fileKey: string; facts: Fact[] }[]): Merge
   const find = labelGroups(all)
   const groups = new Map<string, Fact[]>()
   for (const f of all) {
-    const key = f.core ? `core:${f.core}` : f.kind === 'item' ? `item:${normLabel(f.section ?? '')}` : `label:${find(normLabel(f.label))}`
+    const key = f.core ? `core:${f.core}` : f.fieldKey ? `field:${f.fieldKey}` : f.listKey ? `list:${f.listKey}` : f.kind === 'item' ? `item:${normLabel(f.section ?? '')}` : `label:${find(normLabel(f.label))}`
     const g = groups.get(key)
     if (g) g.push(f)
     else groups.set(key, [f])
@@ -176,12 +182,17 @@ export function mergeFacts(perFile: { fileKey: string; facts: Fact[] }[]): Merge
   const out: MergedFact[] = []
   for (const [key, facts] of groups) {
     const values: MergedFact['values'] = []
-    const keysOf = (f: Fact) => [normValue(f.value, f.unit), f.valueAlt ? normValue(f.valueAlt, null) : null].filter(Boolean) as string[]
+    const explicit = key.startsWith('field:') || key.startsWith('list:')
+    // Reader facts compare on their English text (ignoring "approximately", spacing and commas);
+    // Arabic-only list items compare on their Arabic.
+    const keysOf = (f: Fact) => explicit
+      ? [f.value ? `en:${sameText(f.value)}` : `ar:${sameText(f.valueAlt ?? '')}`]
+      : [normValue(f.value, f.unit), f.valueAlt ? normValue(f.valueAlt, null) : null].filter(Boolean) as string[]
     const seen: { keys: Set<string>; entry: MergedFact['values'][number] }[] = []
     for (const f of facts) {
       const ks = keysOf(f)
       // Values compare without units too when only one side has a unit ("100" vs "100 km").
-      const loose = normValue(f.value, null)
+      const loose = explicit ? ks[0] : normValue(f.value, null)
       const hit = seen.find((s) => ks.some((k) => s.keys.has(k)) || s.keys.has(`loose:${loose}`))
       if (hit) {
         if (!hit.entry.sources.some((s) => s.fileKey === f.source.fileKey && s.page === f.source.page)) hit.entry.sources.push(f.source)
@@ -206,6 +217,8 @@ export function mergeFacts(perFile: { fileKey: string; facts: Fact[] }[]): Merge
       core: first.core,
       values,
       conflict: first.kind === 'value' && values.length > 1,
+      ...(first.fieldKey ? { fieldKey: first.fieldKey } : {}),
+      ...(first.listKey ? { listKey: first.listKey } : {}),
     })
   }
   return out
