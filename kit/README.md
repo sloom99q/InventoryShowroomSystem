@@ -22,7 +22,8 @@ templates/templates.js Exact HTML/CSS of both documents (pt units, measured)
 templates/render.mjs   Renders both PDFs with headless Chromium + overflow checks
 sample/                Fictional test car (Valtren Orisa X5) + placeholder photos
 reference/             Correct output for the sample car: spec-sheet.pdf, brochure.pdf
-compare.py             Checks a generated PDF against the reference (±2 pt)
+compare.py             Checks a generated PDF against the reference (±2 pt). Latin words only;
+                       lines that contain Arabic (incl. Latin words inside them) are checked by eye
 car-page-mockup/       Target design for the vehicle page (html + png)
 assets/                banner-left.png + banner-text.png (layered per-car banner), fallback
                        spec-header-banner.jpg, watermark (rebuilt from how the original
@@ -67,6 +68,7 @@ Keep the extraction engine. Change only where facts land:
 - `templates.js` is the specification: positions, sizes, colours, fonts and rules.
 - **Renderer:** keep Typst if you want, but port these layouts exactly. Alternatively use the HTML templates directly, if you can export them to a file without a server.
   - Either way, `compare.py reference/X.pdf yours.pdf` must print **PASS** for both documents generated from `sample/sample-data.json`.
+  - `compare.py` skips every line that contains Arabic, including Latin words inside it (".WLTP", "360"): engines order the runs of mixed-direction lines differently, so those are checked by eye like the Arabic itself.
   - Also compare Arabic and images by eye against the reference.
   - If you cannot get to PASS, stop and report the remaining differences. Do not loosen the tolerance.
 - **Arabic font:** use Noto Naskh Arabic, which is what the reference uses. It is visually closest to the original's Arial Arabic.

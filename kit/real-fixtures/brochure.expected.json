@@ -26,7 +26,7 @@
     "interior_features_en": ["Triple 12.3-inch Displays", "Panoramic Sunroof", "Electrically Adjustable Front Seats with Heating, Ventilation, and Massage", "Premium Dynaudio Sound System", "Multi-Color Ambient Lighting", "Automatic Climate Control"],
     "interior_features_ar_count": 6,
     "smart_features_en": ["Adaptive Cruise Control (ACC)", "Lane Keeping Assist (LKA)", "Lane Departure Warning (LDW)", "Automatic Emergency Braking (AEB)", "Forward Collision Warning (FCW)", "360° Surround-View Camera", "Intelligent Parking Assistance", "Blind-Spot Monitoring (BSM)"],
-    "smart_features_ar_count": 9
+    "smart_features_ar_count": 8
   },
   "photos": { "pages_with_photos": 17, "cover_photo_from_page": 1 },
   "notes": [

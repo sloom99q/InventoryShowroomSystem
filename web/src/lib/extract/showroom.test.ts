@@ -91,11 +91,7 @@ describe('§6 test 2: the showroom brochure', async () => {
     expect(got.lists.interior_features.filter((i) => i.en).map((i) => i.en)).toEqual(want.lists.interior_features_en)
     expect(got.lists.smart_features.filter((i) => i.en).map((i) => i.en)).toEqual(want.lists.smart_features_en)
     expect(got.lists.interior_features.filter((i) => i.ar).length).toBe(want.lists.interior_features_ar_count)
-    // brochure.expected.json says 9 Arabic smart-driving items, but the file's text layer holds 8 Arabic
-    // bullets in that section (page 3's right column has 17 bullets: 1 drive modes + 8 interior + 8 smart;
-    // the night-vision bullet is there, a blind-spot one is not). Every Arabic bullet that exists is kept.
-    expect(want.lists.smart_features_ar_count).toBe(9)
-    expect(got.lists.smart_features.filter((i) => i.ar).length).toBe(8)
+    expect(got.lists.smart_features.filter((i) => i.ar).length).toBe(want.lists.smart_features_ar_count)
   })
   it('offers the cover (page 1) and every picture-only page', () => {
     expect(x.coverPage).toBe(want.photos.cover_photo_from_page)

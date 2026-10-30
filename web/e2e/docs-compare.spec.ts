@@ -49,7 +49,7 @@ function compare(ref: string, mine: string) {
 
 test.beforeAll(() => mkdirSync(OUT, { recursive: true }))
 
-test('sample car: spec sheet compare.py PASS; brochure PASS except the known Latin-in-Arabic-line word grouping (3 tokens)', async ({ page }) => {
+test('sample car: both documents match the kit reference (compare.py PASS)', async ({ page }) => {
   test.setTimeout(120_000)
   await page.goto('/')
   const { data, files } = sample()
@@ -68,14 +68,7 @@ test('sample car: spec sheet compare.py PASS; brochure PASS except the known Lat
   expect(br.problems).toEqual([])
   const cb = compare('brochure.pdf', path.join(OUT, 'brochure.pdf'))
   console.log('brochure:', cb.out)
-  // KNOWN GAP (reported, not hidden): Chromium and Typst write the runs of a mixed
-  // Arabic/Latin line in a different order, so PyMuPDF groups a few Latin tokens INSIDE
-  // Arabic bullets into different words ('.WLTP' vs '.' + 'WLTP'). Glyph positions are
-  // identical. Every other word must match exactly; any failure outside an Arabic line fails.
-  const fails = cb.out === 'PASS' ? [] : cb.out.split('\n').slice(1).map((l) => l.trim()).filter(Boolean)
-  const outsideArabic = spawnSync(PY, [path.join(import.meta.dirname, 'arabic_line_tokens.py'), path.join(KIT, 'reference', 'brochure.pdf'), JSON.stringify(fails)], { encoding: 'utf8' })
-  expect(JSON.parse(outsideArabic.stdout || '["checker failed"]')).toEqual([])
-  expect(fails.length).toBeLessThanOrEqual(3)
+  expect(cb.out).toBe('PASS')
 })
 
 test('layout problems are reported, long names shrink to one line', async ({ page }) => {

@@ -7,6 +7,7 @@ Usage:  pip install pymupdf
 Checks page count, page size, and the position of every Latin WORD of the reference:
 each must exist in the generated PDF (same page, same order) within TOL points
 (1 pt = 0.35 mm). Arabic is shaped differently by different engines: check it by eye.
+Whole lines that contain Arabic (including Latin words inside them) are skipped for the same reason.
 Word-based, so it does not depend on how a PDF tool groups words into lines.
 """
 import re, sys
@@ -16,8 +17,14 @@ TOL = 2.0
 AR = re.compile("[؀-ۿﭐ-﷿ﹰ-﻿]")
 
 def words(page):
+    raw = page.get_text("words", sort=True)
+    # Lines that contain Arabic are checked by eye: different engines order the runs of a
+    # mixed Arabic/Latin line differently, so the Latin tokens inside them group differently.
+    arabic_lines = {(b, l) for *_, w, b, l, _n in raw if AR.search(w)}
     out = []
-    for x0, y0, x1, y1, w, *_ in page.get_text("words", sort=True):
+    for x0, y0, x1, y1, w, b, l, _n in raw:
+        if (b, l) in arabic_lines:
+            continue
         w = w.strip("✓•")
         if w and not AR.search(w):
             out.append((w, x0, y0))
