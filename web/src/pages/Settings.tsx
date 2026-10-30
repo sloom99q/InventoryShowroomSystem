@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/AppShell'
 import { Button } from '@/components/ui/button'
-import { Field, Input, Select } from '@/components/ui/form'
+import { Field, Input, Select, Textarea } from '@/components/ui/form'
 import { Panel, PanelHeader } from '@/components/ui/misc'
 import { LOCALES, type Locale } from '@/i18n'
 import { useCompany } from '@/lib/auth'
@@ -15,7 +15,7 @@ import { friendlyError, supabase } from '@/lib/supabase'
 import { applyBranding, chromeIsDark, contrast, inkOn, PRESETS } from '@/lib/theme'
 import type { Company } from '@/lib/types'
 
-type Draft = Pick<Company, 'name' | 'accent_color' | 'sidebar_color' | 'theme_mode' | 'logo_path' | 'logo_dark_path' | 'default_locale' | 'known_brands'>
+type Draft = Pick<Company, 'name' | 'accent_color' | 'sidebar_color' | 'theme_mode' | 'logo_path' | 'logo_dark_path' | 'default_locale' | 'known_brands' | 'doc_banner_path' | 'doc_watermark_path' | 'legal_name' | 'signature_line' | 'disclaimer'>
 
 function ColorField({ label, hint, value, onChange, warning }: { label: string; hint?: string; value: string; onChange: (v: string) => void; warning?: string }) {
   const [text, setText] = useState(value)
@@ -36,7 +36,7 @@ function ColorField({ label, hint, value, onChange, warning }: { label: string; 
   )
 }
 
-function LogoField({ label, hint, path, companyId, onChange, dark }: { label: string; hint: string; path: string | null; companyId: string; onChange: (p: string | null) => void; dark?: boolean }) {
+function LogoField({ label, hint, path, companyId, onChange, dark, wide }: { label: string; hint: string; path: string | null; companyId: string; onChange: (p: string | null) => void; dark?: boolean; wide?: boolean }) {
   const { t } = useTranslation('settings')
   const url = useSignedUrl(path)
   const [busy, setBusy] = useState(false)
@@ -45,7 +45,7 @@ function LogoField({ label, hint, path, companyId, onChange, dark }: { label: st
     try {
       const s = await validateFile(f, 'image')
       if (s.mime === 'image/heic') throw new Error(t('logoHint'))
-      const p = `${companyId}/branding/logo-${crypto.randomUUID()}.${s.ext}`
+      const p = `${companyId}/branding/asset-${crypto.randomUUID()}.${s.ext}`
       await uploadObject(p, f, s.mime)
       onChange(p)
       toast.success(t('logoUploaded'))
@@ -59,7 +59,7 @@ function LogoField({ label, hint, path, companyId, onChange, dark }: { label: st
     <Field label={label} hint={hint}>
       {(id) => (
         <div className="flex flex-wrap items-center gap-3">
-          <div className={cn('flex h-16 w-44 items-center justify-center rounded-md border border-line p-2', dark ? 'bg-[var(--chrome)]' : 'bg-white')}>
+          <div className={cn('flex items-center justify-center rounded-md border border-line p-2', wide ? 'h-20 w-80' : 'h-16 w-44', dark ? 'bg-[var(--chrome)]' : 'bg-white')}>
             {url.data ? <img src={url.data} alt="" className="max-h-full max-w-full object-contain" /> : <ImageUp className="size-5 text-ink-3" />}
           </div>
           <label className={cn('inline-flex h-9 cursor-pointer items-center rounded-md border border-line bg-surface px-3 text-sm hover:bg-hover', busy && 'pointer-events-none opacity-60')}>
@@ -74,7 +74,7 @@ function LogoField({ label, hint, path, companyId, onChange, dark }: { label: st
 }
 
 export default function Settings() {
-  const { t } = useTranslation(['settings', 'common', 'docimport'])
+  const { t } = useTranslation(['settings', 'common', 'docimport', 'salesdocs'])
   const { company } = useCompany()
   const [brand, setBrand] = useState('')
   const qc = useQueryClient()
@@ -82,6 +82,8 @@ export default function Settings() {
     name: company.name, accent_color: company.accent_color, sidebar_color: company.sidebar_color, theme_mode: company.theme_mode,
     logo_path: company.logo_path, logo_dark_path: company.logo_dark_path, default_locale: company.default_locale,
     known_brands: company.known_brands ?? [],
+    doc_banner_path: company.doc_banner_path, doc_watermark_path: company.doc_watermark_path,
+    legal_name: company.legal_name, signature_line: company.signature_line, disclaimer: company.disclaimer,
   }
   const [d, setD] = useState<Draft>(initial)
   const set = (p: Partial<Draft>) => setD((x) => ({ ...x, ...p }))
@@ -127,6 +129,20 @@ export default function Settings() {
               </Field>
               <div className="text-[13.5px]"><p className="text-ink-3">{t('currency')}</p><p>{company.currency}</p></div>
               <div className="text-[13.5px]"><p className="text-ink-3">{t('timezone')}</p><p>{t('timezoneValue', { tz: company.timezone })}</p></div>
+            </div>
+          </Panel>
+
+          <Panel>
+            <PanelHeader title={t('salesdocs:settings.title')} />
+            <div className="space-y-5 p-5">
+              <p className="text-[13px] text-ink-2">{t('salesdocs:settings.hint')}</p>
+              <LogoField label={t('salesdocs:settings.banner')} hint={t('salesdocs:settings.bannerHint')} path={d.doc_banner_path} companyId={company.id} onChange={(p) => set({ doc_banner_path: p })} wide />
+              <LogoField label={t('salesdocs:settings.watermark')} hint={t('salesdocs:settings.watermarkHint')} path={d.doc_watermark_path} companyId={company.id} onChange={(p) => set({ doc_watermark_path: p })} />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label={t('salesdocs:settings.legalName')}>{(id) => <Input id={id} dir="auto" value={d.legal_name ?? ''} placeholder={d.name} onChange={(e) => set({ legal_name: e.target.value || null })} />}</Field>
+                <Field label={t('salesdocs:settings.signature')}>{(id) => <Input id={id} dir="auto" value={d.signature_line} onChange={(e) => set({ signature_line: e.target.value })} />}</Field>
+                <Field label={t('salesdocs:settings.disclaimer')} className="sm:col-span-2">{(id) => <Textarea id={id} dir="auto" rows={3} value={d.disclaimer ?? ''} onChange={(e) => set({ disclaimer: e.target.value || null })} />}</Field>
+              </div>
             </div>
           </Panel>
 

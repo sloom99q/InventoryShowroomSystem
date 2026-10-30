@@ -10,7 +10,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/form'
 import { Panel, PanelHeader } from '@/components/ui/misc'
 import { Chassis, StatusBadge, VehicleThumb, vehicleTitle } from '@/components/vehicle-bits'
+import { useVehicleData } from '@/api/fields'
 import { useCompany } from '@/lib/auth'
+import { FIELD_BY_KEY, matchField, matchList, SECTION_OF } from '@/lib/fields'
 import { cn } from '@/lib/cn'
 import { detectKind, extractFile, mergeFacts } from '@/lib/extract/index'
 import { isDocumentHeading, suggestName } from '@/lib/extract/core'
@@ -20,10 +22,10 @@ import { friendlyError, supabase } from '@/lib/supabase'
 import type { ImageType } from '@/lib/types'
 import { checkChassis, normalizeChassis } from '@/lib/vin'
 import { FileList, FilePreview } from './FilePanel'
-import { CoreFieldsPanel, PhotosPanel, SpecsPanel, TextPanel } from './ReviewPanels'
+import { CoreFieldsPanel, OtherPanel, PhotosPanel, SectionsPanel, TextPanel } from './ReviewPanels'
 import {
-  buildCandidates, chosenValue, defaultChoice, defaultSpecDecision, EDITABLE, type EditableField, type FieldCandidate,
-  type FieldChoice, needsDecision, type SessionFile, specFacts, type SpecDecision,
+  buildCandidates, chosenValue, defaultChoice, EDITABLE, type EditableField, type FieldCandidate,
+  type BiChoice, biNeedsDecision, chosenBi, defaultBiChoice, type FieldChoice, needsDecision, placeFacts, type SessionFile,
 } from './session'
 
 type Target = { mode: 'existing'; id: string } | { mode: 'new' } | null
@@ -45,8 +47,9 @@ export default function ImportFiles({ embedded = false }: { embedded?: boolean }
   const [picking, setPicking] = useState(false)
   const [selected, setSelected] = useState<{ key: string; page: number | null } | null>(null)
   const [choiceOverride, setChoiceOverride] = useState<Partial<Record<EditableField, FieldChoice>>>({})
-  const [specOverride, setSpecOverride] = useState<Record<string, SpecDecision>>({})
-  const [items, setItems] = useState<Record<string, boolean>>({})
+  const [fieldOverride, setFieldOverride] = useState<Record<string, BiChoice>>({})
+  const [itemOff, setItemOff] = useState<Set<string>>(new Set())
+  const [otherOff, setOtherOff] = useState<Set<string>>(new Set())
   const [textPicked, setTextPicked] = useState<Set<string>>(new Set())
   const [photoOverride, setPhotoOverride] = useState<Record<string, { keep: boolean; type: ImageType }>>({})
   const [wrongCarOk, setWrongCarOk] = useState(false)
@@ -141,8 +144,14 @@ export default function ImportFiles({ embedded = false }: { embedded?: boolean }
   const otherVehicle = match.data?.find((m) => m.vehicle && mismatched.includes(m.chassis))?.vehicle
 
   // ---- Specs & photos --------------------------------------------------------------
-  const specs = useMemo(() => specFacts(merged), [merged])
-  const decisions = useMemo(() => Object.fromEntries(specs.map((m) => [m.id, specOverride[m.id] ?? defaultSpecDecision(m)])), [specs, specOverride])
+  // Facts placed on the fixed fields (kit/fields.json); the rest is "Other".
+  const placement = useMemo(() => placeFacts(merged, matchField, matchList, new Set(['brand', 'model', 'year', 'trim', 'listing_price'])), [merged])
+  const saved = useVehicleData(target?.mode === 'existing' ? target.id : undefined)
+  const currentField = (key: string) => {
+    const r = saved.data?.fields.get(key)
+    return r ? { en: r.value_en, ar: r.value_ar } : undefined
+  }
+  const fieldChoices = Object.fromEntries([...placement.fields].map(([k, c]) => [k, k in fieldOverride ? fieldOverride[k] : defaultBiChoice(c, currentField(k))])) as Record<string, BiChoice>
   const photoChoice = useMemo(() => Object.fromEntries(files.flatMap((f) => f.images).map((i) => [i.id,
     photoOverride[i.id] ?? { keep: i.origin === 'file', type: i.origin === 'file' ? 'arrival' : 'other' }])), [files, photoOverride])
 
@@ -159,7 +168,7 @@ export default function ImportFiles({ embedded = false }: { embedded?: boolean }
   if (!ready.length && !files.some((f) => f.images.length)) blockers.push(t('block.noFiles'))
   const unresolvedFields = EDITABLE.filter((f) => choices[f] === null && needsDecision(f, cands[f], current[f] ?? null, isNew))
   if (unresolvedFields.length) blockers.push(t('block.fields', { count: unresolvedFields.length }))
-  const unresolvedSpecs = specs.filter((m) => m.kind === 'value' && decisions[m.id].include === null)
+  const unresolvedSpecs = [...placement.fields].filter(([k, c]) => fieldChoices[k] === null && biNeedsDecision(c, currentField(k)))
   if (unresolvedSpecs.length) blockers.push(t('block.specs', { count: unresolvedSpecs.length }))
   if (isNew && !newChassis) blockers.push(t('block.chassis'))
   if (isNew && newChassis && checkChassis(newChassis).errors.length) blockers.push(t('block.chassisInvalid'))
@@ -204,23 +213,26 @@ export default function ImportFiles({ embedded = false }: { embedded?: boolean }
       }
 
       const out: Record<string, unknown>[] = []
-      for (const m of specs) {
-        if (m.kind === 'item') {
-          m.values.forEach((v, vi) => {
-            if (items[`${m.id}:${vi}`] === false) return
-            out.push({ section: m.section, label: m.label || m.section || t('review.feature'), label_alt: m.labelAlt, value: v.value, unit: v.unit, source_key: v.sources[0]?.fileKey, source_page: v.sources[0]?.page })
-          })
-          continue
-        }
-        const d = decisions[m.id]
-        if (!d.include) continue
-        const v = m.values[Math.max(0, d.valueIndex)]
-        const value = (d.custom ?? v.value).trim()
-        if (!value) continue
-        out.push({ section: m.section, label: m.label, label_alt: m.labelAlt, value, unit: d.unit, source_key: v.sources[0]?.fileKey, source_page: v.sources[0]?.page })
+      const src = (c: { sources: SourceRef[] }) => ({ source_key: c.sources[0]?.fileKey, source_page: c.sources[0]?.page })
+      for (const [key, cands] of placement.fields) {
+        const v = chosenBi(fieldChoices[key], cands)
+        if (!v || (!v.en && !v.ar)) continue
+        const def = FIELD_BY_KEY.get(key)!
+        const c = fieldChoices[key]?.kind === 'candidate' ? cands[(fieldChoices[key] as { index: number }).index] : null
+        out.push({ field_key: key, label: def.label_en, label_alt: def.label_ar, section: SECTION_OF.get(key)?.title_en ?? null,
+          value_en: v.en, value_ar: v.ar ?? currentField(key)?.ar ?? null, ...(c ? src(c) : {}) })
+      }
+      for (const [list, items] of placement.lists) items.forEach((it, i) => {
+        if (itemOff.has(`${list}:${i}`)) return
+        out.push({ list, section: SECTION_OF.get(list)?.title_en ?? null, value_en: it.en, value_ar: it.ar, ...src(it) })
+      })
+      for (const m of placement.other) {
+        if (otherOff.has(m.id)) continue
+        for (const v of m.values) out.push({ section: m.section, label: m.label || m.section || t('review.feature'), label_alt: m.labelAlt,
+          value_en: v.value, value_ar: v.valueAlt ?? null, unit: v.unit, ...src(v) })
       }
       for (const f of ready) f.extraction!.unstructured.forEach((u, i) => {
-        if (textPicked.has(`${f.key}:${i}`)) out.push({ section: t('review.otherText'), label: t('review.noteLabel'), value: u.text, source_key: f.key, source_page: u.page })
+        if (textPicked.has(`${f.key}:${i}`)) out.push({ section: t('review.otherText'), label: t('review.noteLabel'), value_en: u.text, source_key: f.key, source_page: u.page })
       })
 
       setSaving(t('saving.record'))
@@ -231,7 +243,7 @@ export default function ImportFiles({ embedded = false }: { embedded?: boolean }
       if (error) throw error
       qc.invalidateQueries()
       toast.success(t('saved', { count: out.length }))
-      nav(`/vehicles/${vid}?tab=specs`)
+      nav(`/vehicles/${vid}`)
     } catch (e) {
       toast.error(friendlyError(e))
     } finally {
@@ -302,8 +314,12 @@ export default function ImportFiles({ embedded = false }: { embedded?: boolean }
             {ready.length > 0 && !target && (
               <Panel className="p-5 text-[13.5px] text-ink-2">{t('target.firstChoose')}</Panel>
             )}
-            <SpecsPanel facts={specs} decisions={decisions} setDecision={(id, d) => setSpecOverride((o) => ({ ...o, [id]: d }))}
-              items={items} setItem={(k, v) => setItems((o) => ({ ...o, [k]: v }))} files={files} onShow={show} />
+            <SectionsPanel placement={placement} choices={fieldChoices} setChoice={(k, c) => setFieldOverride((o) => ({ ...o, [k]: c }))}
+              current={currentField} needsDecision={(k) => biNeedsDecision(placement.fields.get(k) ?? [], currentField(k))}
+              itemOff={itemOff} toggleItem={(k) => setItemOff((s0) => { const n = new Set(s0); if (n.has(k)) n.delete(k); else n.add(k); return n })}
+              files={files} onShow={show} />
+            <OtherPanel facts={placement.other} off={otherOff} files={files} onShow={show}
+              toggle={(id) => setOtherOff((s0) => { const n = new Set(s0); if (n.has(id)) n.delete(id); else n.add(id); return n })} />
             <TextPanel files={ready} picked={textPicked} onShow={show}
               toggle={(k) => setTextPicked((s) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n })} />
             <PhotosPanel files={files} choice={photoChoice} setChoice={(id, v) => setPhotoOverride((o) => ({ ...o, [id]: v }))} />

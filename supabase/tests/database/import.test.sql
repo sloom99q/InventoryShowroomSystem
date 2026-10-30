@@ -44,8 +44,8 @@ select public.save_vehicle_import(null,
   '{"chassis_number":"TSTA1234567890123","brand":"Fictional","model":"One","year":"2024","listing_price":"189900.00"}',
   '[{"key":"f1","storage_path":"11111111-1111-1111-1111-111111111111/imports/s1/brochure.pdf","original_filename":"brochure.pdf","mime_type":"application/pdf","file_size":100,"document_type":"other","extracted_text":"text"}]',
   '[{"storage_path":"11111111-1111-1111-1111-111111111111/imports/s1/photo.jpg","original_filename":"p1.jpg","mime_type":"image/jpeg","file_size":50,"image_type":"arrival"}]',
-  '[{"section":"Battery","label":"Capacity","label_alt":"السعة","value":"82","unit":"kWh","source_key":"f1","source_page":1},
-    {"section":"Features","label":"Features","value":"Heated seats","source_key":"f1","source_page":2}]') as id;
+  '[{"section":"Battery","label":"Capacity","label_alt":"السعة","value_en":"82","unit":"kWh","source_key":"f1","source_page":1},
+    {"section":"Features","label":"Features","value_en":"Heated seats","source_key":"f1","source_page":2}]') as id;
 
 select is((select listing_price from public.vehicles where id = (select id from result)), 189900.00::numeric, 'asking price saved (not the sale price)');
 select is((select sale_price from public.vehicles where id = (select id from result)), null, 'sale price untouched');

@@ -41,44 +41,9 @@ export function PhotosTab({ vehicleId }: { vehicleId: string }) {
   if (q.isLoading) return <PageLoader />
   if (q.error) return <ErrorNote error={q.error} />
   const live = q.data!.filter((i) => !i.superseded_at)
-  const cards = q.data!.filter((i) => i.image_type === 'information_card')
-  const card = cards.find((c) => !c.superseded_at)
 
   return (
     <div className="space-y-5">
-      <Panel>
-        <PanelHeader title={t('photos.infoCard')}>
-          {canWrite && <Button size="sm" onClick={() => setAdding('information_card')}><ImagePlus />{card ? t('photos.replaceCard') : t('photos.addCard')}</Button>}
-        </PanelHeader>
-        <div className="p-4">
-          {card ? (
-            <div className="flex flex-col gap-4 sm:flex-row">
-              <div className="w-full max-w-md"><Thumb img={card} onClick={() => setBox({ list: [card], i: 0 })} /></div>
-              <div className="text-[13px] text-ink-2">
-                <p dir="auto">{card.original_filename}</p>
-                <p className="text-ink-3">{t('photos.added', { date: fmtDateTime(card.uploaded_at) })}</p>
-                <Button size="sm" className="mt-3" onClick={() => downloadFile(card.storage_path, card.original_filename)}><Download />{t('photos.downloadOriginal')}</Button>
-                {cards.length > 1 && (
-                  <div className="mt-4">
-                    <p className="mb-1 text-ink-3">{t('photos.earlierVersions')}</p>
-                    <ul className="space-y-1">
-                      {cards.filter((c) => c.superseded_at).map((c) => (
-                        <li key={c.id}>
-                          <button className="text-accent underline" dir="auto" onClick={() => downloadFile(c.storage_path, c.original_filename)}>{c.original_filename}</button>{' '}
-                          <span className="text-ink-3">{t('photos.replacedOn', { date: fmtDateTime(c.superseded_at) })}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <p className="text-[13px] text-ink-3">{t('photos.noCard')}</p>
-          )}
-        </div>
-      </Panel>
-
       {GROUPS.map((g) => {
         const list = live.filter((i) => i.image_type === g.type)
         return (
@@ -105,7 +70,7 @@ export function PhotosTab({ vehicleId }: { vehicleId: string }) {
   )
 }
 
-function AddPhotos({ companyId, vehicleId, type, onClose }: { companyId: string; vehicleId: string; type: ImageType; onClose: () => void }) {
+export function AddPhotos({ companyId, vehicleId, type, onClose }: { companyId: string; vehicleId: string; type: ImageType; onClose: () => void }) {
   const { t, i18n } = useTranslation(['vehicle', 'common'])
   const [files, setFiles] = useState<File[]>([])
   const [done, setDone] = useState(0)

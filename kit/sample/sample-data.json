@@ -1,0 +1,63 @@
+{
+  "_about": "Fictional test vehicle. Shape = what the app must pass to the templates. Values keyed by fields.json keys; each value is { en, ar } (ar optional).",
+  "doc_date": "2026-11-02",
+  "identity": {
+    "brand": "VALTREN", "model": "ORISA X5", "year": "2024", "trim": "Long Range AWD Signature",
+    "description": "Luxury Plug-In Hybrid Crossover",
+    "regional_specs": { "en": "GCC specs" },
+    "listing_price": 189500, "currency": "AED"
+  },
+  "values": {
+    "engine": { "en": "2.0L Turbocharged Petrol Engine (Hybrid)", "ar": "محرك بنزين 2.0 لتر تيربو هجين." },
+    "electric_motors": { "en": "Single Rear Electric Motor", "ar": "محرك كهربائي خلفي واحد." },
+    "total_output": { "en": "Approximately 300 kW / 402 HP", "ar": "300 كيلوواط / حوالي 402 حصان." },
+    "max_torque": { "en": "640 Nm", "ar": "640 نيوتن متر." },
+    "battery": { "en": "38 kWh lithium-ion", "ar": "38 كيلوواط ساعة." },
+    "drive": { "en": "AWD (All-Wheel Drive)", "ar": "رباعي" },
+    "acceleration": { "en": "Approximately 5.1 seconds", "ar": "5.1 ثانية." },
+    "top_speed": { "en": "210 km/h", "ar": "210 كم/ساعة." },
+    "range": { "en": "Up to 1,120 km (WLTP)", "ar": "يصل إلى 1,120 كم وفق معيار WLTP." },
+    "front_suspension": { "en": "MacPherson Strut Independent Suspension", "ar": "مستقل بنظام ماكفرسون" },
+    "rear_suspension": { "en": "Multi-Link Independent Suspension", "ar": "مستقل متعدد الوصلات" },
+    "suspension_system": { "en": "Adaptive Dampers with selectable firmness", "ar": "مخمدات متكيفة قابلة للضبط." },
+    "drivetrain": { "en": "Intelligent All-Wheel Drive", "ar": "دفع رباعي ذكي." },
+    "dimensions": { "en": "4,820 × 1,930 × 1,690 mm" },
+    "wheels": { "en": "21-inch alloy, 265/40 R21" },
+    "fuel_consumption": { "en": "Approximately 1.2 L/100 km", "ar": "حوالي 1.2 لتر لكل 100 كم" },
+    "fuel_tank": { "en": "Approximately 60 Liters", "ar": "60 لترًا." },
+    "powertrain_type": { "en": "Plug-In Hybrid Electric Vehicle (PHEV)", "ar": "سيارة هجينة قابلة للشحن." },
+    "seating": { "en": "7-Seater Family SUV", "ar": "سيارة عائلية بسبعة مقاعد." },
+    "wheelbase": { "en": "2900mm", "ar": "2900 ملم." }
+  },
+  "lists": {
+    "drive_modes": [ { "en": "Eco", "ar": "الاقتصادي" }, { "en": "Comfort", "ar": "المريح" }, { "en": "Sport", "ar": "الرياضي" }, { "en": "Off-Road", "ar": "الطرق الوعرة" } ],
+    "interior_features": [
+      { "en": "Dual 14.6-inch Displays", "ar": "شاشتان قياس 14.6 بوصة." },
+      { "en": "Panoramic Glass Roof", "ar": "سقف زجاجي بانورامي." },
+      { "en": "Heated and Ventilated Front Seats", "ar": "مقاعد أمامية مدفأة ومهوّاة." },
+      { "en": "18-Speaker Premium Audio", "ar": "نظام صوتي فاخر بـ 18 سماعة." },
+      { "en": "Three-Zone Climate Control", "ar": "تكييف بثلاث مناطق." }
+    ],
+    "smart_features": [
+      { "en": "Adaptive Cruise Control (ACC)", "ar": "مثبت السرعة التكيفي" },
+      { "en": "Lane Keeping Assist (LKA)", "ar": "مساعد البقاء في المسار" },
+      { "en": "Automatic Emergency Braking (AEB)", "ar": "نظام الكبح التلقائي في حالات الطوارئ" },
+      { "en": "360° Surround-View Camera", "ar": "كاميرا محيطية 360 درجة" },
+      { "en": "Blind-Spot Monitoring (BSM)", "ar": "مراقبة النقطة العمياء" },
+      { "en": "Automatic Parking", "ar": "الركن التلقائي" }
+    ],
+    "key_features": [
+      "Up to 1,120 km combined range", "Dual 14.6\" displays", "Nappa leather upholstery",
+      "Panoramic glass roof", "Level 2 driver assistance", "Adaptive dampers",
+      "Heated & ventilated front seats", "18-speaker premium audio", "Three-zone climate control",
+      "360° camera & blind-spot monitoring"
+    ]
+  },
+  "photos": { "cover": "photos/cover.jpg", "pages": ["photos/photo1.jpg", "photos/photo2.jpg", "photos/photo3.jpg", "photos/photo4.jpg", "photos/photo5.jpg"] },
+  "company": {
+    "banner": "../assets/spec-header-banner.jpg", "watermark": "../assets/watermark-logo.png",
+    "signature": "Management", "legal_name": "Sinolink Motors DWC-LLC",
+    "disclaimer": "Prices are subject to change and availability without prior notice. Specifications are indicative and may vary by version; please confirm at time of purchase.",
+    "cover_title_color": "#C5E0B4"
+  }
+}

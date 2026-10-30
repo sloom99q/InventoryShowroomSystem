@@ -67,6 +67,7 @@ const ar: Messages<typeof en> = {
     delivered: 'تم التسليم',
   },
   documentType: {
+    brochure: 'البروشور',
     vehicle_pdf: 'ملف السيارة PDF',
     registration: 'التسجيل',
     inspection: 'الفحص',

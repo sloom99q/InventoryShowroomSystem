@@ -64,6 +64,27 @@ and audited. Chassis safety rules still apply: no auto-correction, exact-match o
 vehicle automatically, and a confirmation when files mention a different chassis.
 Test fixtures for a fictional car live in `web/e2e/fixtures/` (`node e2e/fixtures/generate.mjs`).
 
+## The kit defines the app (`kit/`)
+
+`kit/README.md` is the specification: `kit/fields.json` is the one field list (identity, six sections in
+brochure order, EN+AR labels, spec-sheet rows, key features). The car page, the import mapping and both
+PDFs use it (app copy: `web/src/lib/fields/fields.json`; a test keeps them identical).
+
+- **Data:** `vehicle_specs` rows have `field_key` (a field, or a list with `position`), `value_en`,
+  `value_ar`. Rows without a field are "Other (not printed)". One value per field per vehicle.
+- **Import:** facts are matched to fields by English/Arabic label plus `web/src/lib/fields/synonyms.json`
+  (labels only); two files disagreeing on a field is a conflict to resolve; the rest goes to Other.
+- **Car page:** header + "Documents X% ready" + six tabs (Specifications, Photos, Documents, Accessories,
+  Expenses, History), per `kit/car-page-mockup`.
+- **PDFs:** typeset in the browser with Typst (`web/src/docs/`), ported from `kit/templates/templates.js`
+  and checked with `kit/compare.py` (PASS for both sample documents, ±2 pt):
+  `cd web && npx playwright test e2e/docs-compare.spec.ts` (needs `worker/.venv` for pymupdf).
+  Fonts: Liberation Sans, Carlito, Noto Naskh Arabic (from `kit/fonts`). Arabic is shaped correctly but
+  not guaranteed searchable inside the PDF — matching the original's look was chosen over that.
+- Export downloads the PDF and stores it with the vehicle (spec sheet as information card, brochure as a
+  versioned "Brochure" document), audited. Inspection blocks on missing brand/model/year, a spec sheet
+  over one page or an overflowing brochure slide; warns on no price, empty fields, missing Arabic, < 3 photos.
+
 ## Branding and languages
 
 - **Per-company branding** (Settings → Branding, admins only): logo, optional logo for dark

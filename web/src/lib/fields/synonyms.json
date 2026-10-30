@@ -1,0 +1,136 @@
+{
+  "total_output": [
+    "total output",
+    "combined output",
+    "total power",
+    "system power",
+    "combined power output",
+    "power",
+    "horsepower",
+    "القوة",
+    "القدرة الإجمالية"
+  ],
+  "max_torque": [
+    "torque",
+    "max torque",
+    "peak torque",
+    "عزم الدوران"
+  ],
+  "battery": [
+    "battery",
+    "battery capacity",
+    "battery size",
+    "البطارية"
+  ],
+  "drive": [
+    "drive",
+    "drive type",
+    "driven wheels",
+    "drive system"
+  ],
+  "acceleration": [
+    "acceleration",
+    "0-100 km h",
+    "0-100",
+    "0 100 km h",
+    "0-100km h",
+    "التسارع"
+  ],
+  "top_speed": [
+    "top speed",
+    "maximum speed",
+    "max speed"
+  ],
+  "range": [
+    "range",
+    "driving range",
+    "total range",
+    "combined range",
+    "المدى",
+    "المدى الإجمالي"
+  ],
+  "electric_motors": [
+    "electric motor",
+    "electric motors",
+    "motor",
+    "motors"
+  ],
+  "engine": [
+    "engine",
+    "range extender",
+    "engine type",
+    "المحرك"
+  ],
+  "seating": [
+    "seats",
+    "seating",
+    "seating capacity",
+    "number of seats",
+    "المقاعد"
+  ],
+  "dimensions": [
+    "dimensions",
+    "l x w x h",
+    "length x width x height",
+    "size",
+    "الابعاد"
+  ],
+  "wheelbase": [
+    "wheelbase",
+    "wheel base"
+  ],
+  "wheels": [
+    "wheels",
+    "rims",
+    "tyres",
+    "tires",
+    "wheel size",
+    "الجنوط",
+    "العجلات"
+  ],
+  "fuel_consumption": [
+    "fuel consumption",
+    "claimed fuel",
+    "fuel economy",
+    "consumption"
+  ],
+  "fuel_tank": [
+    "fuel tank",
+    "fuel tank capacity",
+    "tank capacity"
+  ],
+  "powertrain_type": [
+    "powertrain",
+    "powertrain type",
+    "fuel type",
+    "منظومة نقل الحركة"
+  ],
+  "regional_specs": [
+    "regional specs",
+    "specs",
+    "specification",
+    "region",
+    "المواصفات"
+  ],
+  "description": [
+    "description",
+    "body type",
+    "body style",
+    "category"
+  ],
+  "front_suspension": [
+    "front suspension"
+  ],
+  "rear_suspension": [
+    "rear suspension"
+  ],
+  "suspension_system": [
+    "suspension",
+    "suspension system"
+  ],
+  "drivetrain": [
+    "drivetrain",
+    "transmission",
+    "gearbox"
+  ]
+}

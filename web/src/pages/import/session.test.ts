@@ -73,3 +73,67 @@ describe('field coercion', () => {
     expect(chosenValue('brand', { kind: 'keep' }, [])).toBeNull()
   })
 })
+
+import { matchField, matchList } from '@/lib/fields'
+import { biNeedsDecision, chosenBi, defaultBiChoice, placeFacts } from './session'
+
+describe('placing facts on the fixed fields', () => {
+  const v = (value: string, unit: string | null, fileKey: string, valueAlt: string | null = null) => ({ value, unit, valueAlt, sources: [src(fileKey)], raw: value })
+  const cols = new Set(['brand', 'model', 'year', 'trim', 'listing_price'])
+
+  it('maps English, Arabic and synonym labels to one field and reports the conflict', () => {
+    const merged = [
+      fact({ label: 'Combined Power', values: [v('490', 'HP', 'a')], conflict: false }),
+      fact({ label: 'Total output', values: [v('483', 'hp', 'b')], conflict: false }),
+      fact({ label: 'سعة البطارية', labelAlt: null, values: [v('38', 'kWh', 'c', '38 كيلوواط ساعة')], conflict: false }),
+    ]
+    const p = placeFacts(merged, matchField, matchList, cols)
+    expect(p.fields.get('total_output')!.map((c) => c.en)).toEqual(['490 HP', '483 hp'])
+    expect(biNeedsDecision(p.fields.get('total_output')!, undefined)).toBe(true)
+    expect(defaultBiChoice(p.fields.get('total_output')!, undefined)).toBeNull()
+    expect(p.fields.get('battery')![0]).toMatchObject({ en: '38 kWh', ar: '38 كيلوواط ساعة' })
+  })
+
+  it('puts bullets under their list and unmatched facts in Other', () => {
+    const merged = [
+      fact({ kind: 'item', section: 'SMART DRIVING', label: 'SMART DRIVING', values: [v('Lane Keeping Assist', null, 'a', 'مساعد البقاء في المسار')], conflict: false }),
+      fact({ label: 'Warranty', values: [v('5 years', null, 'a')], conflict: false }),
+    ]
+    const p = placeFacts(merged, matchField, matchList, cols)
+    expect(p.lists.get('smart_features')![0]).toMatchObject({ en: 'Lane Keeping Assist', ar: 'مساعد البقاء في المسار' })
+    expect(p.other.map((m) => m.label)).toEqual(['Warranty'])
+  })
+
+  it('same value in two files is one candidate with both sources; Arabic is borrowed when missing', () => {
+    const merged = [fact({ label: 'Top Speed', values: [v('210', 'km/h', 'a'), v('210', 'km/h', 'b', '210 كم/ساعة')], conflict: true })]
+    const p = placeFacts(merged, matchField, matchList, cols)
+    const c = p.fields.get('top_speed')!
+    expect(c).toHaveLength(1)
+    expect(c[0].sources).toHaveLength(2)
+    expect(chosenBi({ kind: 'candidate', index: 0 }, c)).toEqual({ en: '210 km/h', ar: '210 كم/ساعة' })
+  })
+
+  it('asks before replacing a different saved value', () => {
+    const c = [{ en: '640 Nm', ar: null, sources: [], raw: '', unit: null }]
+    expect(defaultBiChoice(c, { en: '600 Nm' })).toBeNull()
+    expect(defaultBiChoice(c, { en: '640 nm' })).toEqual({ kind: 'candidate', index: 0 })
+  })
+})
+
+describe('field catalogue', () => {
+  it('matches the kit exactly', async () => {
+    const { readFileSync } = await import('node:fs')
+    const kit = JSON.parse(readFileSync(new URL('../../../../kit/fields.json', import.meta.url), 'utf8'))
+    const app = JSON.parse(readFileSync(new URL('../../lib/fields/fields.json', import.meta.url), 'utf8'))
+    expect(app).toEqual(kit)
+  })
+  it('matches labels in English, Arabic, with notes in brackets and by synonym', () => {
+    expect(matchField('Maximum Torque')).toBe('max_torque')
+    expect(matchField('عزم الدوران الأقصى')).toBe('max_torque')
+    expect(matchField('Seats')).toBe('seating')
+    expect(matchField('0-100 km/h (s)')).toBe('acceleration')
+    expect(matchField('L × W × H')).toBe('dimensions')
+    expect(matchField('Warranty')).toBeNull()
+    expect(matchList('Drive Modes')).toBe('drive_modes')
+  })
+})

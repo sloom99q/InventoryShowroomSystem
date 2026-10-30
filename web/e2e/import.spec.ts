@@ -8,7 +8,7 @@ const files = ['a-brochure-bilingual.pdf', 'b-spec-table.pdf', 'c-summary.docx',
 test('imports four mixed-format files for one new car, with conflicts, Arabic and photos', async ({ page }) => {
   await login(page)
   await page.goto('/vehicles/import')
-  await page.locator('input[type=file][multiple]').setInputFiles([...files, path.join(FX, 'notes.txt.fake')].filter((f) => !f.endsWith('.fake')))
+  await page.locator('input[type=file][multiple][accept*=".docx"]').setInputFiles([...files, path.join(FX, 'notes.txt.fake')].filter((f) => !f.endsWith('.fake')))
 
   // Every file is read; nothing is saved yet.
   await expect(page.getByText(/details found/)).toHaveCount(4, { timeout: 30_000 })
@@ -17,10 +17,13 @@ test('imports four mixed-format files for one new car, with conflicts, Arabic an
   // No chassis in any file and we came from "Add vehicle": it starts as a new vehicle (switchable).
   await expect(page.getByText('New vehicle').first()).toBeVisible()
 
-  // The conflicting value is shown, not resolved.
-  const conflict = page.locator('li', { hasText: 'The files disagree' }).first()
-  await expect(conflict).toBeVisible()
+  // Facts land on the fixed fields; the conflicting range is shown, not resolved.
+  const range = page.locator('fieldset[data-field=range]')
+  await expect(range).toContainText('540 km')
+  await expect(range).toContainText('525 km')
+  await expect(range.getByText('Choose one')).toBeVisible()
   await expect(page.getByText(/conflict.* to resolve/)).toBeVisible()
+  await expect(page.locator('fieldset[data-field=battery]')).toContainText('سعة البطارية')
 
   // Model year comes from the vehicle name, not the 2023 document date.
   const year = page.locator('fieldset[data-field=year]')
@@ -45,7 +48,6 @@ test('imports four mixed-format files for one new car, with conflicts, Arabic an
   const chassisField = page.locator('fieldset[data-field=chassis_number]')
   await chassisField.getByText('Type a value').click()
   await chassisField.getByPlaceholder('LVVDB21B9PD012345').fill(chassis)
-  for (const c of await page.locator('li', { hasText: 'The files disagree' }).all()) await c.locator('input[type=radio]').first().check()
   for (const f of ['brand', 'model', 'year']) {
     const fs = page.locator(`fieldset[data-field=${f}]`)
     const radios = fs.locator('input[type=radio]:not([disabled])')
@@ -58,13 +60,13 @@ test('imports four mixed-format files for one new car, with conflicts, Arabic an
   const save = page.getByRole('button', { name: 'Create vehicle and save' })
   await expect(save).toBeEnabled()
   await save.click()
-  await page.waitForURL(/tab=specs/, { timeout: 30_000 }).catch(async () => {
+  await page.waitForURL(/\/vehicles\/[0-9a-f-]{36}$/, { timeout: 30_000 }).catch(async () => {
     throw new Error('Save failed: ' + (await page.locator('[data-sonner-toast]').allInnerTexts()).join(' | '))
   })
 
-  // Specifications saved by section, with sources; documents and the picked photo attached.
-  await expect(page.getByRole('heading', { level: 2 }).first()).toBeVisible()
-  await expect(page.locator('main')).toContainText('a-brochure-bilingual.pdf')
+  // Values are on the car page's Specifications tab, in the catalogue's sections.
+  await expect(page.locator('main')).toContainText('ENGINE & PERFORMANCE')
+  await expect(page.locator('main')).toContainText('540 km')
   await page.screenshot({ path: 'e2e/screens/specs-tab.png', fullPage: true })
   await page.getByRole('tab', { name: /Documents/ }).click()
   await expect(page.getByText('c-summary.docx').first()).toBeVisible()
@@ -76,7 +78,7 @@ test('imports four mixed-format files for one new car, with conflicts, Arabic an
 test('an inventory spreadsheet is routed to bulk import', async ({ page }) => {
   await login(page)
   await page.goto('/vehicles/import')
-  await page.locator('input[type=file][multiple]').setInputFiles(path.join(FX, 'e-inventory.xlsx'))
+  await page.locator('input[type=file][multiple][accept*=".docx"]').setInputFiles(path.join(FX, 'e-inventory.xlsx'))
   await page.getByRole('button', { name: 'Open in bulk import' }).click()
   await expect(page).toHaveURL(/\/import$/)
   await expect(page.getByText(/ready/).first()).toBeVisible({ timeout: 15_000 })
@@ -85,6 +87,6 @@ test('an inventory spreadsheet is routed to bulk import', async ({ page }) => {
 test('unsupported files are rejected with a clear message', async ({ page }) => {
   await login(page)
   await page.goto('/vehicles/import')
-  await page.locator('input[type=file][multiple]').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
+  await page.locator('input[type=file][multiple][accept*=".docx"]').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
   await expect(page.getByText(/notes\.txt: this file type is not supported/)).toBeVisible()
 })

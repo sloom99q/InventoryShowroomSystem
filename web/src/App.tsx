@@ -15,6 +15,7 @@ const ImportExport = lazy(() => import('@/pages/ImportExport'))
 const Staff = lazy(() => import('@/pages/Staff'))
 const Settings = lazy(() => import('@/pages/Settings'))
 const ImportFiles = lazy(() => import('@/pages/import/ImportFiles'))
+const SalesDocuments = lazy(() => import('@/pages/documents/SalesDocuments'))
 
 export default function App() {
   const { session, loading, profile, company, isAdmin } = useAuth()
@@ -33,6 +34,7 @@ export default function App() {
             <Route path="vehicles/import" element={<Navigate to="/vehicles/new?mode=documents" replace />} />
             <Route path="vehicles/:id" element={<VehicleDetail />} />
             <Route path="vehicles/:id/import" element={<ImportFiles key="existing" />} />
+            <Route path="vehicles/:id/documents" element={<SalesDocuments />} />
             <Route path="documents" element={<Documents />} />
             <Route path="expenses" element={<Expenses />} />
             <Route path="import" element={<ImportExport />} />

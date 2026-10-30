@@ -15,7 +15,7 @@ function translated<K extends string>(keys: readonly K[], prefix: string): Recor
 
 export const STATUS_ORDER: VehicleStatus[] = ['in_stock', 'in_garage', 'reserved', 'sold', 'delivered']
 export const STATUS_LABEL = translated<VehicleStatus>(STATUS_ORDER, 'status')
-export const DOCUMENT_LABEL = translated<DocumentType>(['vehicle_pdf', 'registration', 'inspection', 'purchase', 'other'], 'documentType')
+export const DOCUMENT_LABEL = translated<DocumentType>(['vehicle_pdf', 'registration', 'inspection', 'purchase', 'brochure', 'other'], 'documentType')
 export const IMAGE_LABEL = translated<ImageType>(['arrival', 'current', 'garage', 'information_card', 'other'], 'imageType')
 export const ACCESSORY_LABEL = translated<AccessoryType>(['physical_key', 'smart_key', 'nfc_card', 'charger', 'other'], 'accessoryType')
 export const ITEM_STATUS_LABEL = translated<ItemStatus>(['present', 'missing', 'unknown'], 'itemStatus')

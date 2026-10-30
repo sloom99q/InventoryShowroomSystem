@@ -18,7 +18,7 @@ test('secretary workflow: add, document, photos, expenses, sell, find', async ({
   await page.getByLabel('Charger').selectOption('missing')
   await page.locator('input[type=file][accept="image/*"]').first().setInputFiles(path.join(FIXTURES, 'd_listing_card.png'))
   await page.getByRole('button', { name: 'Save vehicle' }).click()
-  await expect(page.getByRole('heading', { name: 'Zeekr 001 FR 2025' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /ZEEKR 001 FR/i })).toBeVisible()
   await page.screenshot({ path: 'e2e/screens/vehicle.png', fullPage: true })
 
   // Duplicate chassis is blocked on the add form.
@@ -58,10 +58,10 @@ test('secretary workflow: add, document, photos, expenses, sell, find', async ({
   await page.getByLabel('Sale date and time').fill('2026-10-29T16:45')
   await page.getByLabel('Note (optional)').fill('Sold to walk-in customer')
   await page.getByRole('button', { name: 'Save status' }).click()
-  await expect(page.getByText('29 Oct 2026, 16:45').first()).toBeVisible()
-  await page.getByRole('tab', { name: 'Timeline' }).click()
+  await expect(page.getByText('Sold 29 Oct 2026').first()).toBeVisible()
+  await page.getByRole('tab', { name: 'History' }).click()
+  await expect(page.getByText(/29 Oct 2026, 16:45/).first()).toBeVisible()
   await expect(page.getByText('Sold to walk-in customer')).toBeVisible()
-  await page.getByRole('tab', { name: 'Change history' }).click()
   await expect(page.getByText(/Vehicle changed/).first()).toBeVisible()
 
   // Global search by the last 6 characters finds it.
@@ -76,7 +76,8 @@ test('reads the chassis number from a digital PDF (Add vehicle → From document
   await page.getByRole('link', { name: 'Add vehicle' }).first().click()
   await expect(page.getByRole('tab', { name: /Enter manually/ })).toHaveAttribute('aria-selected', 'true')
   await page.getByRole('tab', { name: /From documents/ }).click()
-  await page.locator('input[type=file][multiple]').setInputFiles(path.join(FIXTURES, 'a_digital_certificate.pdf'))
+  await expect(page.getByText('Drop files here, or click to choose')).toBeVisible()
+  await page.locator('input[type=file][multiple][accept*=".docx"]').setInputFiles(path.join(FIXTURES, 'a_digital_certificate.pdf'))
   const chassis = page.locator('fieldset[data-field=chassis_number]')
   await expect(chassis.locator('input[type=radio]:checked')).toHaveCount(1, { timeout: 20_000 })
   await expect(chassis).toContainText('1GNSKCKD7PR123456')

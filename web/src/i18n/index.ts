@@ -14,13 +14,15 @@ import arAuth from './ar/auth'
 import enAuth from './en/auth'
 import arDocimport from './ar/docimport'
 import enDocimport from './en/docimport'
+import arSalesdocs from './ar/salesdocs'
+import enSalesdocs from './en/salesdocs'
 import arSettings from './ar/settings'
 import enSettings from './en/settings'
 
 // Each screen group has its own namespace file in en/ and ar/; register it here.
 export const resources = {
-  en: { common: enCommon, vehicle: enVehicle, add: enAdd, importer: enImporter, pages: enPages, auth: enAuth, settings: enSettings, docimport: enDocimport },
-  ar: { common: arCommon, vehicle: arVehicle, add: arAdd, importer: arImporter, pages: arPages, auth: arAuth, settings: arSettings, docimport: arDocimport },
+  en: { common: enCommon, vehicle: enVehicle, add: enAdd, importer: enImporter, pages: enPages, auth: enAuth, settings: enSettings, docimport: enDocimport, salesdocs: enSalesdocs },
+  ar: { common: arCommon, vehicle: arVehicle, add: arAdd, importer: arImporter, pages: arPages, auth: arAuth, settings: arSettings, docimport: arDocimport, salesdocs: arSalesdocs },
 } as const
 
 export type Locale = 'en' | 'ar'

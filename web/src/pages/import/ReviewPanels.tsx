@@ -9,7 +9,8 @@ import { cn } from '@/lib/cn'
 import type { ImageCandidate, MergedFact, SourceRef } from '@/lib/extract/types'
 import { IMAGE_LABEL } from '@/lib/labels'
 import type { ImageType } from '@/lib/types'
-import { type EditableField, type FieldCandidate, type FieldChoice, groupBySection, type SessionFile, type SpecDecision } from './session'
+import { type BiCandidate, type BiChoice, type EditableField, type FieldCandidate, type FieldChoice, type Placement, type SessionFile } from './session'
+import { FIELD_BY_KEY, FIELDS } from '@/lib/fields'
 
 export function SourceChips({ sources, files, onShow }: { sources: SourceRef[]; files: SessionFile[]; onShow: (s: SourceRef) => void }) {
   const { t } = useTranslation('docimport')
@@ -108,87 +109,141 @@ export function CoreFieldsPanel({ cands, choices, setChoice, current, isNew, fil
 
 // ---------------------------------------------------------------------------
 
-export function SpecsPanel({ facts, decisions, setDecision, items, setItem, files, onShow }: {
-  facts: MergedFact[]
-  decisions: Record<string, SpecDecision>
-  setDecision: (id: string, d: SpecDecision) => void
-  items: Record<string, boolean>
-  setItem: (key: string, v: boolean) => void
+const IDENTITY_EXTRAS = FIELDS.identity.filter((f) => !['brand', 'model', 'year', 'trim', 'listing_price'].includes(f.key))
+
+function BiFieldRow({ fkey, cands, choice, setChoice, current, unresolved, files, onShow }: {
+  fkey: string
+  cands: BiCandidate[]
+  choice: BiChoice
+  setChoice: (c: BiChoice) => void
+  current: { en: string | null; ar: string | null } | undefined
+  unresolved: boolean
   files: SessionFile[]
   onShow: (s: SourceRef) => void
 }) {
   const { t } = useTranslation('docimport')
-  const groups = groupBySection(facts)
+  const def = FIELD_BY_KEY.get(fkey)!
+  const name = `bi-${fkey}`
+  const box = (on: boolean) => cn('flex cursor-pointer flex-wrap items-center gap-x-2 gap-y-1 rounded-md border px-2.5 py-1.5 text-[13.5px]', on ? 'border-ink-2 bg-raised' : 'border-line-soft hover:bg-raised')
+  return (
+    <fieldset className={cn('grid gap-2 px-4 py-3 sm:grid-cols-[170px_1fr]', unresolved && 'bg-warn/[0.06]')} data-field={fkey}>
+      <legend className="contents">
+        <span className="pt-1 text-[13px] font-medium text-ink-2">
+          {def.label_en}
+          <span className="block text-[12px] font-normal text-ink-3" dir="rtl" lang="ar">{def.label_ar}</span>
+          {unresolved && <span className="mt-0.5 flex items-center gap-1 text-[12px] font-normal text-warn"><AlertTriangle className="size-3.5" />{t('review.chooseOne')}</span>}
+        </span>
+      </legend>
+      <div className="space-y-1.5">
+        {cands.map((c, i) => (
+          <label key={i} className={box(choice?.kind === 'candidate' && choice.index === i)}>
+            <input type="radio" name={name} checked={choice?.kind === 'candidate' && choice.index === i} onChange={() => setChoice({ kind: 'candidate', index: i })} />
+            <span className="min-w-0 flex-1">
+              <span className="block font-medium" dir="auto">{c.en}</span>
+              {c.ar && <span className="block text-[12.5px] text-ink-2" dir="rtl" lang="ar">{c.ar}</span>}
+            </span>
+            <SourceChips sources={c.sources} files={files} onShow={onShow} />
+          </label>
+        ))}
+        <label className={box(choice?.kind === 'keep')}>
+          <input type="radio" name={name} checked={choice?.kind === 'keep'} onChange={() => setChoice({ kind: 'keep' })} />
+          {current?.en
+            ? <span className="text-ink-2">{t('review.keepCurrent')}: <b className="font-medium text-ink" dir="auto">{current.en}</b></span>
+            : <span className="text-ink-2">{t('review.leaveEmpty')}</span>}
+        </label>
+        <div className={cn('rounded-md border px-2.5 py-1.5', choice?.kind === 'custom' ? 'border-ink-2 bg-raised' : 'border-line-soft')}>
+          <label className="flex cursor-pointer items-center gap-2 text-[13px] text-ink-2">
+            <input type="radio" name={name} checked={choice?.kind === 'custom'} onChange={() => setChoice({ kind: 'custom', en: cands[0]?.en ?? '', ar: cands.find((c) => c.ar)?.ar ?? '' })} />
+            {t('review.typeValue')}
+          </label>
+          {choice?.kind === 'custom' && (
+            <div className="mt-1.5 grid gap-1.5 sm:grid-cols-2">
+              <Input value={choice.en} onChange={(e) => setChoice({ ...choice, en: e.target.value })} dir="auto" aria-label={def.label_en} placeholder="English" autoFocus />
+              <Input value={choice.ar} onChange={(e) => setChoice({ ...choice, ar: e.target.value })} dir="rtl" lang="ar" aria-label={def.label_ar} placeholder="العربية" />
+            </div>
+          )}
+        </div>
+      </div>
+    </fieldset>
+  )
+}
+
+/** Found values laid out in the same sections as the car page. */
+export function SectionsPanel({ placement, choices, setChoice, current, needsDecision, itemOff, toggleItem, files, onShow }: {
+  placement: Placement
+  choices: Record<string, BiChoice>
+  setChoice: (key: string, c: BiChoice) => void
+  current: (key: string) => { en: string | null; ar: string | null } | undefined
+  needsDecision: (key: string) => boolean
+  itemOff: Set<string>
+  toggleItem: (key: string) => void
+  files: SessionFile[]
+  onShow: (s: SourceRef) => void
+}) {
+  const { t } = useTranslation('docimport')
+  const groups = [
+    { key: 'identity', title_en: t('review.identity'), title_ar: '', fields: IDENTITY_EXTRAS, list: undefined as string | undefined },
+    ...FIELDS.sections.map((s) => ({ key: s.key, title_en: s.title_en, title_ar: s.title_ar, fields: s.fields ?? [], list: s.list })),
+  ]
+  const row = (key: string) => (
+    <BiFieldRow key={key} fkey={key} cands={placement.fields.get(key)!} choice={choices[key]} setChoice={(c) => setChoice(key, c)}
+      current={current(key)} unresolved={choices[key] === null && needsDecision(key)} files={files} onShow={onShow} />
+  )
+  const found = groups.filter((g) => g.fields.some((f) => placement.fields.has(f.key)) || (g.list && placement.lists.get(g.list)?.length))
+  if (!found.length) return null
+  return (
+    <>
+      {found.map((g) => {
+        const missing = g.fields.filter((f) => !placement.fields.has(f.key)).length
+        const items = g.list ? placement.lists.get(g.list) ?? [] : []
+        return (
+          <Panel key={g.key} data-section={g.key}>
+            <PanelHeader title={<span className="flex flex-wrap items-baseline gap-x-3"><span>{g.title_en}</span>{g.title_ar && <span className="text-[13px] font-normal text-ink-3" dir="rtl" lang="ar">{g.title_ar}</span>}</span>}>
+              {missing > 0 && <span className="text-[12px] text-ink-3">{t('review.notInFiles', { count: missing })}</span>}
+            </PanelHeader>
+            <div className="divide-y divide-line-soft">
+              {g.fields.filter((f) => placement.fields.has(f.key)).map((f) => row(f.key))}
+              {items.map((it, i) => {
+                const k = `${g.list}:${i}`
+                return (
+                  <label key={k} className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-[13.5px]">
+                    <input type="checkbox" checked={!itemOff.has(k)} onChange={() => toggleItem(k)} />
+                    <span className="min-w-0 flex-1" dir="auto">{it.en}</span>
+                    {it.ar && <span className="text-[12.5px] text-ink-2" dir="rtl" lang="ar">{it.ar}</span>}
+                    <SourceChips sources={it.sources} files={files} onShow={onShow} />
+                  </label>
+                )
+              })}
+            </div>
+          </Panel>
+        )
+      })}
+    </>
+  )
+}
+
+/** Facts that match no field: kept on the car page as "Other" (never printed). */
+export function OtherPanel({ facts, off, toggle, files, onShow }: { facts: MergedFact[]; off: Set<string>; toggle: (id: string) => void; files: SessionFile[]; onShow: (s: SourceRef) => void }) {
+  const { t } = useTranslation('docimport')
   if (!facts.length) return null
   return (
     <Panel>
-      <PanelHeader title={t('review.specs')} />
-      {groups.map(([section, rows]) => (
-        <div key={section || '-'} className="border-b border-line-soft last:border-0">
-          <h3 className="bg-raised px-4 py-1.5 text-[12.5px] font-semibold text-ink-2" dir="auto">{section || t('review.general')}</h3>
-          <ul className="divide-y divide-line-soft">
-            {rows.map((m) => {
-              if (m.kind === 'item') {
-                return m.values.map((v, vi) => {
-                  const key = `${m.id}:${vi}`
-                  return (
-                    <li key={key} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-[13.5px]">
-                      <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
-                        <input type="checkbox" checked={items[key] ?? true} onChange={(e) => setItem(key, e.target.checked)} />
-                        <span dir="auto">{v.value}</span>
-                      </label>
-                      <SourceChips sources={v.sources} files={files} onShow={onShow} />
-                    </li>
-                  )
-                })
-              }
-              const d = decisions[m.id]
-              return (
-                <li key={m.id} className={cn('px-4 py-2.5 text-[13.5px]', m.conflict && d?.include === null && 'bg-warn/[0.06]')} data-spec={m.label}>
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <label className="flex basis-56 cursor-pointer items-center gap-2 text-ink-2">
-                      <input type="checkbox" checked={d?.include === true}
-                        onChange={(e) => setDecision(m.id, { ...d, include: e.target.checked, valueIndex: d.valueIndex < 0 && e.target.checked ? 0 : d.valueIndex })} />
-                      <span><span className="block" dir="auto">{m.label}</span>{m.labelAlt && <span className="block text-[12.5px] text-ink-3" dir="auto">{m.labelAlt}</span>}</span>
-                    </label>
-                    {!m.conflict && (
-                      <>
-                        <Input className="h-8 min-w-40 flex-1" dir="auto" aria-label={m.label}
-                          value={d?.custom ?? m.values[0].value} onChange={(e) => setDecision(m.id, { ...d, custom: e.target.value })} />
-                        <Input className="h-8 w-20" dir="auto" aria-label={t('specs.unit')} value={d?.unit ?? ''} onChange={(e) => setDecision(m.id, { ...d, unit: e.target.value || null })} />
-                        <SourceChips sources={m.values[0].sources} files={files} onShow={onShow} />
-                      </>
-                    )}
-                  </div>
-                  {m.conflict && (
-                    <div className="mt-2 space-y-1 ps-6">
-                      <p className="flex items-center gap-1 text-[12px] text-warn"><AlertTriangle className="size-3.5" />{t('review.conflict')}</p>
-                      {m.values.map((v, vi) => (
-                        <label key={vi} className={cn('flex cursor-pointer flex-wrap items-center gap-2 rounded-md border px-2.5 py-1.5', d?.include && d.valueIndex === vi && d.custom === null ? 'border-ink-2 bg-raised' : 'border-line-soft hover:bg-raised')}>
-                          <input type="radio" name={`s-${m.id}`} checked={!!d?.include && d.valueIndex === vi && d.custom === null}
-                            onChange={() => setDecision(m.id, { include: true, valueIndex: vi, custom: null, unit: v.unit })} />
-                          <span className="font-medium" dir="auto">{v.value}{v.unit && <span className="ms-1 font-normal text-ink-2">{v.unit}</span>}</span>
-                          <SourceChips sources={v.sources} files={files} onShow={onShow} />
-                        </label>
-                      ))}
-                      <label className="flex cursor-pointer items-center gap-2 rounded-md border border-line-soft px-2.5 py-1.5">
-                        <input type="radio" name={`s-${m.id}`} checked={!!d?.include && d.custom !== null}
-                          onChange={() => setDecision(m.id, { include: true, valueIndex: 0, custom: '', unit: m.values[0].unit })} />
-                        <span className="text-ink-2">{t('review.typeValue')}</span>
-                        {d?.include && d.custom !== null && <Input className="h-8 flex-1" dir="auto" value={d.custom} autoFocus aria-label={m.label} onChange={(e) => setDecision(m.id, { ...d, custom: e.target.value })} />}
-                      </label>
-                      <label className="flex cursor-pointer items-center gap-2 rounded-md border border-line-soft px-2.5 py-1.5">
-                        <input type="radio" name={`s-${m.id}`} checked={d?.include === false} onChange={() => setDecision(m.id, { ...d, include: false })} />
-                        <span className="text-ink-2">{t('review.dontSave')}</span>
-                      </label>
-                    </div>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-      ))}
+      <details>
+        <summary className="flex min-h-12 cursor-pointer items-center justify-between px-4 text-[14px] font-semibold">
+          {t('review.other', { count: facts.length })}
+          <span className="text-[12.5px] font-normal text-ink-3">{t('review.otherHint')}</span>
+        </summary>
+        <ul className="divide-y divide-line-soft border-t border-line-soft">
+          {facts.map((m) => (
+            <li key={m.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-[13px]">
+              <input type="checkbox" checked={!off.has(m.id)} onChange={() => toggle(m.id)} aria-label={t('review.keepLine')} />
+              <span className="basis-48 text-ink-2" dir="auto">{m.label}{m.labelAlt && <span className="block text-ink-3" dir="rtl">{m.labelAlt}</span>}</span>
+              <span className="min-w-0 flex-1" dir="auto">{m.values.map((v) => [v.value, v.unit].filter(Boolean).join(' ')).join(' · ')}</span>
+              <SourceChips sources={m.values.flatMap((v) => v.sources)} files={files} onShow={onShow} />
+            </li>
+          ))}
+        </ul>
+      </details>
     </Panel>
   )
 }

@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Archive, ArchiveRestore, ArrowLeftRight, BadgeCheck, Pencil, ShieldAlert, Upload } from 'lucide-react'
-import { useState } from 'react'
+import { Archive, ArchiveRestore, ArrowLeftRight, ArrowRight, BadgeCheck, Eye, FileText, MoreHorizontal, Pencil, ShieldAlert, Upload } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
@@ -12,49 +12,62 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { ConfirmDialog, Dialog } from '@/components/ui/dialog'
 import { Field, Input, Textarea } from '@/components/ui/form'
 import { ErrorNote, PageLoader, Panel, Tabs } from '@/components/ui/misc'
+import { readiness, useFieldWriter, useVehicleData, type VehicleData } from '@/api/fields'
+import { cn } from '@/lib/cn'
+import { FIELDS, isListKey } from '@/lib/fields'
 import { fromForm, toForm, VehicleFields, vehicleSchema, type VehicleForm } from '@/components/VehicleFields'
 import { Chassis, StatusBadge, VehicleThumb, vehicleTitle } from '@/components/vehicle-bits'
 import { useCompany } from '@/lib/auth'
-import { fmtDateTime, fmtKm, fmtMoney, fromLocalInput, nowLocalInput } from '@/lib/format'
+import { fmtDate, fmtDateTime, fmtKm, fmtMoney, fromLocalInput, nowLocalInput, parseAmount } from '@/lib/format'
 import { STATUS_LABEL, STATUS_ORDER } from '@/lib/labels'
 import { friendlyError } from '@/lib/supabase'
 import type { VehicleOverview, VehicleStatus } from '@/lib/types'
 import { AccessoriesTab } from './vehicle/AccessoriesTab'
-import { ActivityTab, TimelineTab } from './vehicle/HistoryTabs'
+import { HistoryTab } from './vehicle/HistoryTabs'
 import { DocumentsTab } from './vehicle/DocumentsTab'
 import { ExpensesTab } from './vehicle/ExpensesTab'
 import { SpecsTab } from './vehicle/SpecsTab'
 import { PhotosTab } from './vehicle/PhotosTab'
 
-type Tab = 'overview' | 'specs' | 'documents' | 'photos' | 'accessories' | 'expenses' | 'timeline' | 'activity'
+type Tab = 'specs' | 'photos' | 'documents' | 'accessories' | 'expenses' | 'history'
+const TABS: Tab[] = ['specs', 'photos', 'documents', 'accessories', 'expenses', 'history']
+/** Tabs from before the redesign still open somewhere sensible. */
+const OLD_TABS: Record<string, Tab> = { overview: 'specs', timeline: 'history', activity: 'history' }
+
+const DAY = 86_400_000
 
 export function VehicleDetail() {
-  const { t } = useTranslation(['vehicle', 'common'])
+  const { t } = useTranslation(['vehicle', 'common', 'salesdocs'])
   const { id } = useParams<{ id: string }>()
   const [params, setParams] = useSearchParams()
-  const tab = (params.get('tab') as Tab) ?? 'overview'
-  const { canWrite, profile } = useCompany()
+  const raw = params.get('tab') ?? 'specs'
+  const tab: Tab = (TABS as string[]).includes(raw) ? (raw as Tab) : OLD_TABS[raw] ?? 'specs'
+  const { canWrite, company } = useCompany()
   const q = useVehicle(id)
+  const data = useVehicleData(id)
   const docs = useDocuments(id!)
   const imgs = useImages(id!)
   const acc = useAccessories(id!)
   const exp = useExpenses(id!)
   const [dialog, setDialog] = useState<null | 'status' | 'edit' | 'archive' | 'chassis'>(null)
+  const [now] = useState(() => Date.now())
 
   if (q.isLoading) return <PageLoader />
   if (q.error || !q.data) return <ErrorNote error={q.error ?? new Error(t('header.notFound'))} />
   const v = q.data
-  const seeAudit = profile.role === 'admin' || profile.role === 'secretary'
+  const photos = (imgs.data ?? []).filter((i) => !i.superseded_at && i.image_type !== 'information_card')
+  const field = (k: string) => data.data?.fields.get(k)?.value_en ?? null
+  const subtitle = [v.trim_level, field('description'), field('regional_specs')].filter(Boolean).join(' · ')
+  const since = v.arrival_at ?? v.created_at
+  const days = since ? Math.max(0, Math.floor(((v.sold_at ? new Date(v.sold_at).getTime() : now) - new Date(since).getTime()) / DAY)) : null
 
   const tabs: { value: Tab; label: string; count?: number | null }[] = [
-    { value: 'overview', label: t('tabs.overview') },
     { value: 'specs', label: t('tabs.specs') },
+    { value: 'photos', label: t('tabs.photos'), count: photos.length },
     { value: 'documents', label: t('tabs.documents'), count: docs.data?.filter((d) => !d.superseded_at).length },
-    { value: 'photos', label: t('tabs.photos'), count: imgs.data?.filter((i) => !i.superseded_at).length },
     { value: 'accessories', label: t('tabs.accessories'), count: acc.data?.length },
     { value: 'expenses', label: t('tabs.expenses'), count: exp.data?.length },
-    { value: 'timeline', label: t('tabs.timeline') },
-    ...(seeAudit ? [{ value: 'activity' as Tab, label: t('tabs.activity') }] : []),
+    { value: 'history', label: t('tabs.history') },
   ]
 
   const accSummary = !v.accessory_count
@@ -65,9 +78,30 @@ export function VehicleDetail() {
         ? t('header.accToCheck', { count: v.unknown_accessories })
         : t('header.accComplete')
 
+  /** Readiness item clicked: identity fields live in "Edit details", the rest in Specifications. */
+  const goTo = (key: string, rowId?: string) => {
+    if (FIELDS.identity.some((f) => f.key === key)) return setDialog('edit')
+    const next: Record<string, string> = { tab: 'specs', field: key }
+    if (rowId && isListKey(key)) next.item = rowId
+    setParams(next, { replace: true })
+  }
+
   return (
     <>
-      <nav className="mb-4 text-[13px] text-ink-3"><Link to="/vehicles" className="hover:text-ink">{t('common:nav.vehicles')}</Link> / <span className="text-ink-2">{vehicleTitle(v)}</span></nav>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <nav className="text-[13px] text-ink-3"><Link to="/vehicles" className="hover:text-ink">{t('common:nav.vehicles')}</Link> / <span className="text-ink-2">{vehicleTitle(v)}</span></nav>
+        {canWrite && (
+          <div className="ms-auto flex flex-wrap items-center gap-2">
+            <Link to={`/vehicles/${v.id}/import`} className={buttonVariants()}><Upload /> {t('header.importFiles')}</Link>
+            <Button onClick={() => setDialog('status')}><ArrowLeftRight className="flip-rtl" /> {t('header.changeStatus')}</Button>
+            <Link to={`/vehicles/${v.id}/documents`} className={buttonVariants({ variant: 'primary' })}><FileText /> {t('page.sheetAndBrochure')}</Link>
+            <MoreMenu v={v} onPick={setDialog} />
+          </div>
+        )}
+        {!canWrite && (
+          <Link to={`/vehicles/${v.id}/documents?view=1`} className={cn(buttonVariants(), 'ms-auto')}><Eye /> {t('page.viewDocuments')}</Link>
+        )}
+      </div>
 
       {v.archived_at && (
         <div className="mb-4 flex items-center gap-3 rounded-lg border border-line bg-raised px-4 py-2.5 text-[13.5px] text-ink-2">
@@ -75,63 +109,62 @@ export function VehicleDetail() {
         </div>
       )}
 
-      <Panel className="overflow-hidden">
-        <div className="flex flex-col gap-5 p-5 sm:flex-row sm:p-6">
-          <VehicleThumb path={v.cover_thumbnail_path} className="aspect-[16/10] w-full sm:w-64" alt={vehicleTitle(v)} />
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-[22px] font-semibold">{vehicleTitle(v)}</h1>
-              <StatusBadge status={v.status!} />
-            </div>
-            {v.trim_level && <p className="text-[13.5px] text-ink-2">{v.trim_level}</p>}
-
-            <div className="mt-4 inline-flex flex-col rounded-md border border-line bg-raised px-4 py-2.5">
-              <span className="text-[11.5px] text-ink-3">{t('header.chassisLabel')}</span>
-              <Chassis value={v.chassis_number!} className="text-[22px] text-ink sm:text-[26px]" />
-              <span className="mt-1 flex items-center gap-1.5 text-[12.5px]">
-                {v.chassis_verified ? (
-                  <span className="flex items-center gap-1.5 text-ok"><BadgeCheck className="size-3.5" />{t('header.chassisChecked')}</span>
-                ) : (
-                  <span className="flex items-center gap-1.5 text-warn"><ShieldAlert className="size-3.5" />{t('header.chassisNotChecked')}</span>
-                )}
-                {canWrite && <ChassisVerifyToggle v={v} />}
-              </span>
-            </div>
-
-            <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-[13px] sm:grid-cols-4">
-              <Fact label={t('header.arrived')} value={fmtDateTime(v.arrival_at)} />
-              <Fact label={v.status === 'delivered' ? t('header.delivered') : t('header.sold')} value={fmtDateTime(v.status === 'delivered' ? v.delivered_at : v.sold_at)} />
-              <Fact label={t('header.expenses')} value={fmtMoney(v.expense_total)} />
-              <Fact label={t('header.accessories')} value={accSummary} tone={v.missing_accessories ? 'danger' : undefined} />
-            </dl>
+      <div className="flex flex-col gap-6 lg:flex-row">
+        <button className="relative block w-full shrink-0 overflow-hidden rounded-lg lg:w-[400px]" onClick={() => setParams({ tab: 'photos' }, { replace: true })}>
+          <VehicleThumb path={v.cover_thumbnail_path} className="aspect-[16/10] w-full rounded-lg" alt={vehicleTitle(v)} />
+          <span className="absolute start-3 bottom-3 rounded-md bg-black/65 px-2 py-1 text-[12px] text-white">
+            {photos.length ? t('page.coverPhotos', { count: photos.length }) : t('page.noPhotos')}
+          </span>
+        </button>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-[28px] leading-tight font-semibold">
+              {[v.brand, v.model].filter(Boolean).join(' ').toUpperCase() || vehicleTitle(v)}
+              {v.year && <span className="ms-2 font-normal text-ink-3">{v.year}</span>}
+            </h1>
+            <StatusBadge status={v.status!} />
           </div>
-          {canWrite && (
-            <div className="flex shrink-0 flex-row flex-wrap gap-2 sm:flex-col">
-              <Button variant="primary" onClick={() => setDialog('status')}><ArrowLeftRight className="flip-rtl" /> {t('header.changeStatus')}</Button>
-              <Button onClick={() => setDialog('edit')}><Pencil /> {t('header.editDetails')}</Button>
-              <Link to={`/vehicles/${v.id}/import`} className={buttonVariants()}><Upload /> {t('header.importFiles')}</Link>
-              {(profile.role === 'admin' || profile.role === 'secretary') && (
-                <>
-                  <Button variant="ghost" onClick={() => setDialog('chassis')}>{t('header.correctChassis')}</Button>
-                  <Button variant="ghost" onClick={() => setDialog('archive')}>{v.archived_at ? <><ArchiveRestore /> {t('header.restore')}</> : <><Archive /> {t('header.archive')}</>}</Button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-        <Tabs value={tab} onChange={(tb) => setParams(tb === 'overview' ? {} : { tab: tb }, { replace: true })} items={tabs} className="border-t border-line-soft px-3 sm:px-4" />
-      </Panel>
+          {subtitle && <p className="mt-1 text-[14px] text-ink-2" dir="auto">{subtitle}</p>}
 
-      <div className="mt-5">
-        {tab === 'overview' && <Overview v={v} />}
-        {tab === 'documents' && <DocumentsTab vehicleId={v.id!} chassis={v.chassis_number!} />}
-        {tab === 'specs' && <SpecsTab vehicleId={v.id!} />}
-        {tab === 'photos' && <PhotosTab vehicleId={v.id!} />}
-        {tab === 'accessories' && <AccessoriesTab vehicleId={v.id!} />}
-        {tab === 'expenses' && <ExpensesTab vehicleId={v.id!} />}
-        {tab === 'timeline' && <TimelineTab vehicleId={v.id!} />}
-        {tab === 'activity' && seeAudit && <ActivityTab vehicleId={v.id!} />}
+          <div className="mt-3 inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-line bg-raised px-3 py-1.5">
+            <span className="text-[11px] tracking-[0.12em] text-ink-3">{t('header.chassisLabel').toUpperCase()}</span>
+            <Chassis value={v.chassis_number!} className="text-[15px] font-medium text-ink" />
+            {v.chassis_verified ? (
+              <span className="flex items-center gap-1 text-[12px] text-ok"><BadgeCheck className="size-3.5" />{t('header.chassisChecked')}</span>
+            ) : (
+              <span className="flex items-center gap-1 text-[12px] text-warn"><ShieldAlert className="size-3.5" />{t('header.chassisNotChecked')}</span>
+            )}
+            {canWrite && <ChassisVerifyToggle v={v} />}
+          </div>
+
+          <p className="mt-4 flex items-baseline gap-2">
+            <span className="text-[13px] text-ink-3">{t('page.asking')}</span>
+            {v.listing_price !== null
+              ? <span className="tnum text-[26px] font-semibold">{fmtMoney(v.listing_price, company.currency, true)}</span>
+              : <button className="text-[14px] text-ink-3 hover:text-ink" onClick={() => canWrite && setDialog('edit')}>{t('page.noPrice')}</button>}
+          </p>
+
+          <dl className="mt-4 grid grid-cols-2 overflow-hidden rounded-lg border border-line-soft bg-surface sm:grid-cols-5">
+            <Fact label={t('header.arrived')} value={fmtDate(v.arrival_at)} />
+            <Fact label={t('page.inStock')} value={days === null ? '—' : t('page.days', { count: days })}
+              sub={v.sold_at ? `${v.status === 'delivered' ? t('header.delivered') : t('header.sold')} ${fmtDate(v.status === 'delivered' ? v.delivered_at : v.sold_at)}` : undefined} />
+            <Fact label={t('page.mileage')} value={v.mileage_km !== null ? fmtKm(v.mileage_km) : '—'} />
+            <Fact label={t('header.expenses')} value={fmtMoney(v.expense_total, company.currency, true)} />
+            <Fact label={t('header.accessories')} value={accSummary} tone={v.missing_accessories ? 'warn' : undefined} />
+          </dl>
+        </div>
       </div>
+
+      {data.data && <ReadinessBar v={v} data={data.data} onGo={goTo} />}
+
+      <Tabs value={tab} onChange={(tb) => setParams(tb === 'specs' ? {} : { tab: tb }, { replace: true })} items={tabs} className="mt-6 mb-5" />
+
+      {tab === 'specs' && <SpecsTab vehicleId={v.id!} />}
+      {tab === 'photos' && <PhotosTab vehicleId={v.id!} />}
+      {tab === 'documents' && <DocumentsTab vehicleId={v.id!} chassis={v.chassis_number!} />}
+      {tab === 'accessories' && <AccessoriesTab vehicleId={v.id!} />}
+      {tab === 'expenses' && <ExpensesTab vehicleId={v.id!} />}
+      {tab === 'history' && <HistoryTab vehicleId={v.id!} />}
 
       <StatusDialog v={v} open={dialog === 'status'} onClose={() => setDialog(null)} />
       <EditDialog v={v} open={dialog === 'edit'} onClose={() => setDialog(null)} />
@@ -141,11 +174,88 @@ export function VehicleDetail() {
   )
 }
 
-function Fact({ label, value, tone }: { label: string; value: string; tone?: 'danger' }) {
+function MoreMenu({ v, onPick }: { v: VehicleOverview; onPick: (d: 'edit' | 'chassis' | 'archive') => void }) {
+  const { t } = useTranslation('vehicle')
+  const { profile } = useCompany()
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !ref.current?.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', close)
+    document.addEventListener('keydown', close)
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', close) }
+  }, [open])
+  const manage = profile.role === 'admin' || profile.role === 'secretary'
+  const item = 'flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-start text-[13.5px] hover:bg-raised [&_svg]:size-4 [&_svg]:text-ink-3'
+  const pick = (d: 'edit' | 'chassis' | 'archive') => { setOpen(false); onPick(d) }
   return (
-    <div>
-      <dt className="text-ink-3">{label}</dt>
-      <dd className={tone === 'danger' ? 'text-danger' : 'text-ink'}>{value}</dd>
+    <div ref={ref} className="relative">
+      <Button size="icon" aria-label={t('page.more')} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}><MoreHorizontal /></Button>
+      {open && (
+        <div role="menu" className="absolute end-0 top-full z-20 mt-1 w-56 overflow-hidden rounded-md border border-line bg-surface py-1 shadow-lg shadow-black/10">
+          <button role="menuitem" className={item} onClick={() => pick('edit')}><Pencil />{t('header.editDetails')}</button>
+          <Link role="menuitem" className={item} to={`/vehicles/${v.id}/documents?view=1`}><Eye />{t('page.viewDocuments')}</Link>
+          {manage && <button role="menuitem" className={item} onClick={() => pick('chassis')}><ShieldAlert />{t('header.correctChassis')}</button>}
+          {manage && (
+            <button role="menuitem" className={item} onClick={() => pick('archive')}>
+              {v.archived_at ? <><ArchiveRestore />{t('header.restore')}</> : <><Archive />{t('header.archive')}</>}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ReadinessBar({ v, data, onGo }: { v: VehicleOverview; data: VehicleData; onGo: (key: string, rowId?: string) => void }) {
+  const { t } = useTranslation('vehicle')
+  const [open, setOpen] = useState(false)
+  const r = readiness(v as never, data)
+  const done = r.gaps.length === 0
+  return (
+    <Panel className="mt-6">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+        <div className="h-1.5 w-40 overflow-hidden rounded-full bg-raised" role="progressbar" aria-valuenow={r.pct} aria-valuemin={0} aria-valuemax={100}>
+          <div className={cn('h-full rounded-full', done ? 'bg-ok' : 'bg-ok/80')} style={{ width: `${r.pct}%` }} />
+        </div>
+        <p className="text-[13.5px]">
+          <b className="font-semibold">{t('ready.title', { pct: r.pct })}</b>{' '}
+          <span className="text-ink-2">
+            {done ? t('ready.allSet') : [r.empty ? t('ready.empty', { count: r.empty }) : null, r.arabic ? t('ready.arabic', { count: r.arabic }) : null].filter(Boolean).join(' · ')}
+          </span>
+        </p>
+        {!done && (
+          <button className="ms-auto inline-flex items-center gap-1 text-[13px] text-warn hover:underline" onClick={() => setOpen(!open)} aria-expanded={open}>
+            {open ? t('ready.hide') : t('ready.show')}<ArrowRight className={cn('size-3.5 flip-rtl transition-transform', open && 'rotate-90')} />
+          </button>
+        )}
+      </div>
+      {open && !done && (
+        <ul className="grid gap-x-6 border-t border-line-soft px-4 py-2 sm:grid-cols-2 lg:grid-cols-3">
+          {r.gaps.map((g, i) => (
+            <li key={`${g.kind}:${g.key}:${g.rowId ?? i}`}>
+              <button className="flex w-full items-center gap-2 py-1.5 text-start text-[13px] hover:text-accent" onClick={() => onGo(g.key, g.rowId)}>
+                <span className={cn('size-1.5 shrink-0 rounded-full', g.kind === 'empty' ? 'bg-ink-3' : 'bg-warn')} />
+                <span className="min-w-0 flex-1 truncate" dir="auto">{g.label}</span>
+                <span className="text-[12px] text-ink-3">{g.kind === 'empty' ? t('ready.emptyItem') : t('ready.arabicItem')}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
+  )
+}
+
+function Fact({ label, value, tone, sub }: { label: string; value: string; tone?: 'warn'; sub?: string }) {
+  return (
+    <div className="border-line-soft px-4 py-3 not-last:border-e max-sm:border-b">
+      <dt className="text-[11px] tracking-[0.1em] text-ink-3">{label.toUpperCase()}</dt>
+      <dd className={cn('mt-1 text-[15px] font-semibold', tone === 'warn' ? 'text-warn' : 'text-ink')}>{value}</dd>
+      {sub && <dd className="text-[12px] text-ink-3">{sub}</dd>}
     </div>
   )
 }
@@ -164,51 +274,6 @@ function ChassisVerifyToggle({ v }: { v: VehicleOverview }) {
     >
       {v.chassis_verified ? t('header.undo') : t('header.markChecked')}
     </button>
-  )
-}
-
-function Overview({ v }: { v: VehicleOverview }) {
-  const { t } = useTranslation('vehicle')
-  const rows: [string, React.ReactNode][] = [
-    [t('overview.brand'), v.brand], [t('overview.model'), v.model], [t('overview.year'), v.year], [t('overview.trim'), v.trim_level],
-    [t('overview.exteriorColor'), v.exterior_color], [t('overview.interiorColor'), v.interior_color],
-    [t('overview.mileage'), v.mileage_km !== null ? fmtKm(v.mileage_km) : null],
-    [t('overview.location'), v.location], [t('overview.status'), STATUS_LABEL[v.status!]], [t('overview.arrived'), fmtDateTime(v.arrival_at)],
-    [t('overview.sold'), fmtDateTime(v.sold_at)], [t('overview.delivered'), fmtDateTime(v.delivered_at)],
-    [t('overview.purchasePrice'), v.acquisition_price !== null ? fmtMoney(v.acquisition_price) : null],
-    [t('overview.listingPrice'), v.listing_price !== null ? fmtMoney(v.listing_price) : null],
-    [t('overview.salePrice'), v.sale_price !== null ? fmtMoney(v.sale_price) : null],
-    [t('overview.created'), fmtDateTime(v.created_at)], [t('overview.updated'), fmtDateTime(v.updated_at)],
-  ]
-  const profit = v.sale_price !== null && v.acquisition_price !== null
-    ? (Math.round(Number(v.sale_price) * 100) - Math.round(Number(v.acquisition_price) * 100) - Math.round(Number(v.expense_total) * 100)) / 100
-    : null
-  return (
-    <div className="grid gap-5 lg:grid-cols-[2fr_1fr]">
-      <Panel>
-        <dl className="grid sm:grid-cols-2">
-          {rows.map(([k, val]) => (
-            <div key={k} className="flex justify-between gap-4 border-b border-line-soft px-4 py-2.5 text-[13.5px] sm:odd:border-e">
-              <dt className="text-ink-2">{k}</dt>
-              <dd className="text-end">{val === null || val === undefined || val === '' ? <span className="text-ink-3">—</span> : val}</dd>
-            </div>
-          ))}
-        </dl>
-      </Panel>
-      <div className="space-y-5">
-        {profit !== null && (
-          <Panel className="p-4">
-            <p className="text-[13px] text-ink-2">{t('overview.grossProfit')}</p>
-            <p className={`tnum mt-1 text-[20px] font-semibold ${profit < 0 ? 'text-danger' : ''}`}>{fmtMoney(profit)}</p>
-            <p className="mt-1 text-[12.5px] text-ink-3">{t('overview.profitFormula')}</p>
-          </Panel>
-        )}
-        <Panel className="p-4">
-          <p className="mb-1 text-[13px] text-ink-2">{t('overview.notes')}</p>
-          <p className="text-[13.5px] whitespace-pre-wrap">{v.notes || <span className="text-ink-3">{t('overview.noNotes')}</span>}</p>
-        </Panel>
-      </div>
-    </div>
   )
 }
 
@@ -263,25 +328,64 @@ function StatusDialog({ v, open, onClose }: { v: VehicleOverview; open: boolean;
 }
 
 function EditDialog({ v, open, onClose }: { v: VehicleOverview; open: boolean; onClose: () => void }) {
-  const { t } = useTranslation(['vehicle', 'common'])
+  const { t } = useTranslation(['vehicle', 'common', 'salesdocs'])
   const form = useForm<VehicleForm>({ resolver: zodResolver(vehicleSchema), values: toForm(v) })
   const upd = useUpdateVehicle(v.id!)
+  const data = useVehicleData(v.id!)
+  const writer = useFieldWriter(v.id!)
+  const field = (k: string) => data.data?.fields.get(k)
+  const [extra, setExtra] = useState<{ price: string; description: string; regionEn: string; regionAr: string } | null>(null)
+  const x = extra ?? {
+    price: v.listing_price !== null ? String(v.listing_price) : '',
+    description: field('description')?.value_en ?? '',
+    regionEn: field('regional_specs')?.value_en ?? '',
+    regionAr: field('regional_specs')?.value_ar ?? '',
+  }
+  const set = (p: Partial<typeof x>) => setExtra({ ...x, ...p })
+  const priceOk = !x.price.trim() || parseAmount(x.price) !== null
+  const close = () => { setExtra(null); onClose() }
+  const save = form.handleSubmit(async (vals) => {
+    if (!priceOk) return
+    try {
+      await upd.mutateAsync({ ...fromForm(vals), listing_price: x.price.trim() ? (parseAmount(x.price) as unknown as number) : null })
+      if (x.description !== (field('description')?.value_en ?? '')) await writer.setField.mutateAsync({ key: 'description', value: { en: x.description } })
+      if (x.regionEn !== (field('regional_specs')?.value_en ?? '') || x.regionAr !== (field('regional_specs')?.value_ar ?? ''))
+        await writer.setField.mutateAsync({ key: 'regional_specs', value: { en: x.regionEn, ar: x.regionAr } })
+      toast.success(t('editDialog.toast'))
+      close()
+    } catch (e) {
+      toast.error(friendlyError(e))
+    }
+  })
   return (
-    <Dialog open={open} onClose={onClose} title={t('editDialog.title')} size="lg"
+    <Dialog open={open} onClose={close} title={t('editDialog.title')} size="lg"
       footer={<>
-        <Button variant="ghost" onClick={onClose}>{t('common:actions.cancel')}</Button>
-        <Button variant="primary" loading={upd.isPending} onClick={form.handleSubmit((vals) => upd.mutate(fromForm(vals), {
-          onSuccess: () => { toast.success(t('editDialog.toast')); onClose() },
-          onError: (e) => toast.error(friendlyError(e)),
-        }))}>{t('common:actions.saveChanges')}</Button>
+        <Button variant="ghost" onClick={close}>{t('common:actions.cancel')}</Button>
+        <Button variant="primary" loading={upd.isPending || writer.setField.isPending} disabled={!priceOk} onClick={save}>{t('common:actions.saveChanges')}</Button>
       </>}>
-      <VehicleFields form={form} />
+      <div className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label={t('overview.listingPrice')} error={priceOk ? undefined : t('salesdocs:fields.listing_price')}>
+            {(id, d) => <Input id={id} aria-describedby={d} inputMode="decimal" dir="ltr" value={x.price} onChange={(e) => set({ price: e.target.value })} placeholder="AED" />}
+          </Field>
+          <Field label={t('page.description')}>
+            {(id) => <Input id={id} dir="auto" value={x.description} onChange={(e) => set({ description: e.target.value })} />}
+          </Field>
+          <Field label={t('page.regionalSpecs')}>
+            {(id) => <Input id={id} dir="auto" value={x.regionEn} onChange={(e) => set({ regionEn: e.target.value })} />}
+          </Field>
+          <Field label={t('page.regionalSpecsAr')}>
+            {(id) => <Input id={id} dir="rtl" lang="ar" value={x.regionAr} onChange={(e) => set({ regionAr: e.target.value })} />}
+          </Field>
+        </div>
+        <VehicleFields form={form} />
+      </div>
     </Dialog>
   )
 }
 
 function ChassisDialog({ v, open, onClose }: { v: VehicleOverview; open: boolean; onClose: () => void }) {
-  const { t } = useTranslation(['vehicle', 'common'])
+  const { t } = useTranslation(['vehicle', 'common', 'salesdocs'])
   const [value, setValue] = useState(v.chassis_number!)
   const [reason, setReason] = useState('')
   const blocked = useChassisBlocked(value, v.id!)

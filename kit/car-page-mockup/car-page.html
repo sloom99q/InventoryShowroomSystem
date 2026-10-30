@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Vehicle — car page mockup</title>
+<style>
+@font-face{font-family:'Ar';src:url('../fonts/NotoNaskhArabic-Regular.ttf')}
+:root{
+  --bg:#0f1012;--panel:#16181b;--panel2:#1c1f23;--line:#2a2d32;--line2:#22252a;
+  --text:#ececee;--muted:#9a9ea6;--faint:#6b7078;--red:#c8102e;--red-soft:rgba(200,16,46,.12);
+  --ok:#3fb27f;--warn:#e0a33a;--r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font:14px/1.45 Inter,'Liberation Sans',system-ui,sans-serif;display:flex;min-height:100vh}
+.ar{font-family:'Ar',serif;direction:rtl;text-align:right}
+/* sidebar */
+nav{width:216px;background:#0b0c0e;border-right:1px solid var(--line2);padding:20px 14px;flex-shrink:0}
+nav .brand{font-weight:700;letter-spacing:.14em;font-size:12px;color:var(--muted);padding:0 10px 22px}
+nav .brand b{color:var(--text);display:block;font-size:15px;letter-spacing:.04em}
+nav a{display:flex;gap:10px;align-items:center;padding:9px 10px;border-radius:8px;color:var(--muted);text-decoration:none;font-size:13.5px}
+nav a.on{background:var(--panel2);color:var(--text)}
+nav a i{width:16px;height:16px;border:1.5px solid currentColor;border-radius:4px;opacity:.7}
+main{flex:1;min-width:0}
+/* top bar */
+.top{display:flex;align-items:center;gap:12px;padding:16px 32px;border-bottom:1px solid var(--line2)}
+.crumb{color:var(--muted);font-size:13px}.crumb b{color:var(--text);font-weight:500}
+.sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--text);padding:8px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer}
+.btn.primary{background:var(--red);border-color:var(--red)}
+.btn.ghost{background:transparent}
+.wrap{padding:24px 32px 48px;max-width:1280px}
+/* header */
+.head{display:grid;grid-template-columns:400px 1fr;gap:28px;align-items:start}
+.hero{aspect-ratio:16/10;border-radius:var(--r);background:linear-gradient(160deg,#2c4a66,#14202c);display:flex;align-items:flex-end;padding:12px;position:relative;overflow:hidden}
+.hero span{font-size:12px;color:#dfe6ee;background:rgba(0,0,0,.45);padding:4px 8px;border-radius:6px}
+.title{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.title h1{font-size:28px;font-weight:700;letter-spacing:-.01em}
+.title h1 em{font-style:normal;color:var(--muted);font-weight:500}
+.pill{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;background:rgba(63,178,127,.14);color:var(--ok)}
+.subt{color:var(--muted);margin-top:4px}
+.vin{margin-top:14px;display:inline-flex;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 12px;font:600 15px/1 'Liberation Mono',ui-monospace,monospace;letter-spacing:.06em}
+.vin small{font:500 11px Inter,'Liberation Sans',sans-serif;color:var(--faint);letter-spacing:.08em}
+.price{margin-top:16px;font-size:26px;font-weight:700}.price small{font-size:13px;color:var(--muted);font-weight:500;margin-right:6px}
+.facts{margin-top:18px;display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.facts div{padding:12px 14px;border-right:1px solid var(--line);background:var(--panel)}
+.facts div:last-child{border-right:none}
+.facts label{display:block;font-size:11.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.06em}
+.facts b{display:block;margin-top:3px;font-size:15px;font-weight:600}
+.facts b.warn{color:var(--warn)}
+/* readiness */
+.ready{margin-top:22px;display:flex;align-items:center;gap:16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 16px}
+.bar{flex:0 0 180px;height:6px;border-radius:3px;background:var(--line);overflow:hidden}.bar i{display:block;height:100%;width:89%;background:var(--ok)}
+.ready p{color:var(--muted);font-size:13px}.ready p b{color:var(--text)}
+.ready a{color:var(--warn);font-size:13px;text-decoration:none}
+/* tabs */
+.tabs{display:flex;gap:4px;margin-top:28px;border-bottom:1px solid var(--line)}
+.tabs a{padding:10px 14px;color:var(--muted);text-decoration:none;font-size:13.5px;font-weight:500;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs a.on{color:var(--text);border-color:var(--red)}
+.tabs a span{color:var(--faint);font-weight:400;margin-left:4px}
+/* spec sections */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.card.full{grid-column:1/-1}
+.card h3{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;font-size:12px;letter-spacing:.1em;color:var(--muted);border-bottom:1px solid var(--line2)}
+.card h3 .ar{letter-spacing:0;font-size:14px;color:var(--faint)}
+.row{display:grid;grid-template-columns:140px 1fr;gap:4px 14px;padding:9px 16px;border-bottom:1px solid var(--line2)}
+.row:last-child{border-bottom:none}
+.row:hover{background:var(--panel2)}
+.row .k{color:var(--muted);font-size:13px}
+.row .k small{display:block;font-family:'Ar',serif;font-size:13px;color:var(--faint);direction:rtl;text-align:left}
+.row .v{font-weight:500}
+.row .v .ar{display:block;color:var(--muted);font-weight:400;font-size:14px;margin-top:2px}
+.row .v.empty{color:var(--faint);font-weight:400}
+.row .v.empty a{color:var(--red);text-decoration:none;font-weight:500}
+.tag{font-size:10.5px;color:var(--faint);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-left:6px;vertical-align:1px}
+.tag.miss{color:var(--warn);border-color:rgba(224,163,58,.4)}
+.list{padding:6px 16px 12px}
+.li{display:flex;justify-content:space-between;gap:16px;padding:7px 0;border-bottom:1px dashed var(--line2)}
+.li:last-child{border:none}
+.li .ar{color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px}
+.chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:13px}
+.chip .ar{display:inline;color:var(--faint);margin-left:6px}
+.kf{display:grid;grid-template-columns:1fr 1fr;gap:0 24px;padding:10px 16px 14px}
+.kf div{padding:6px 0;display:flex;gap:10px}.kf div:before{content:'✓';color:var(--red);font-weight:700}
+.count{font-size:12px;color:var(--faint)}
+.other{margin-top:16px;color:var(--muted);font-size:13px;padding:12px 16px;border:1px dashed var(--line);border-radius:var(--r)}
+.note{margin-top:28px;color:var(--faint);font-size:12px}
+</style></head>
+<body>
+<nav>
+  <div class="brand"><b>SINOLINK</b>INVENTORY</div>
+  <a href="#"><i></i>Dashboard</a>
+  <a href="#" class="on"><i></i>Vehicles</a>
+  <a href="#"><i></i>Expenses</a>
+  <a href="#"><i></i>Settings</a>
+</nav>
+<main>
+  <div class="top">
+    <div class="crumb">Vehicles / <b>Valtren Orisa X5 2024</b></div>
+    <div class="sp"></div>
+    <button class="btn ghost">Import files</button>
+    <button class="btn">Change status</button>
+    <button class="btn primary">Spec sheet &amp; brochure</button>
+  </div>
+
+  <div class="wrap">
+    <section class="head">
+      <div class="hero"><span>Cover photo · 18 photos</span></div>
+      <div>
+        <div class="title"><h1>VALTREN ORISA X5 <em>2024</em></h1><span class="pill">In stock</span></div>
+        <div class="subt">Long Range AWD Signature · Luxury Plug-In Hybrid Crossover · GCC specs</div>
+        <div class="vin"><small>CHASSIS</small>LVTDB21B9RD012345</div>
+        <div class="price"><small>Asking</small>AED 189,500</div>
+        <div class="facts">
+          <div><label>Arrived</label><b>14 Oct 2026</b></div>
+          <div><label>In stock</label><b>16 days</b></div>
+          <div><label>Mileage</label><b>12 km</b></div>
+          <div><label>Expenses</label><b>AED 2,450</b></div>
+          <div><label>Accessories</label><b class="warn">1 missing</b></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="ready">
+      <div class="bar"><i></i></div>
+      <p><b>Documents 89% ready.</b> 3 fields empty · 2 Arabic values missing</p>
+      <div class="sp"></div>
+      <a href="#">Show what's missing →</a>
+    </div>
+
+    <div class="tabs">
+      <a href="#" class="on">Specifications</a>
+      <a href="#">Photos<span>18</span></a>
+      <a href="#">Documents<span>4</span></a>
+      <a href="#">Accessories<span>5</span></a>
+      <a href="#">Expenses<span>3</span></a>
+      <a href="#">History</a>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <h3>ENGINE &amp; PERFORMANCE <span class="ar">المحرك والأداء</span></h3>
+        <div class="row"><div class="k">Engine<small>المحرك</small></div><div class="v">2.0L Turbocharged Petrol Engine (Hybrid)<span class="ar">محرك بنزين 2.0 لتر تيربو هجين.</span></div></div>
+        <div class="row"><div class="k">Electric Motors<small>المحركات الكهربائية</small></div><div class="v">Single Rear Electric Motor<span class="ar">محرك كهربائي خلفي واحد.</span></div></div>
+        <div class="row"><div class="k">Combined Power<small>القوة الإجمالية</small></div><div class="v">Approximately 300 kW / 402 HP<span class="ar">300 كيلوواط / حوالي 402 حصان.</span></div></div>
+        <div class="row"><div class="k">Maximum Torque<small>عزم الدوران الأقصى</small></div><div class="v">640 Nm<span class="ar">640 نيوتن متر.</span></div></div>
+        <div class="row"><div class="k">Battery Capacity<small>سعة البطارية</small></div><div class="v">38 kWh lithium-ion<span class="tag miss">Arabic missing</span></div></div>
+        <div class="row"><div class="k">Drive Type<small>نظام الدفع</small></div><div class="v">AWD (All-Wheel Drive)<span class="ar">رباعي</span></div></div>
+        <div class="row"><div class="k">0–100 km/h<small>التسارع</small></div><div class="v">Approximately 5.1 seconds<span class="ar">5.1 ثانية.</span></div></div>
+        <div class="row"><div class="k">Top Speed<small>السرعة القصوى</small></div><div class="v">210 km/h<span class="ar">210 كم/ساعة.</span></div></div>
+        <div class="row"><div class="k">Total Driving Range<small>مدى القيادة الإجمالي</small></div><div class="v">Up to 1,120 km (WLTP)<span class="ar">يصل إلى 1,120 كم وفق معيار WLTP.</span></div></div>
+      </div>
+
+      <div class="card">
+        <h3>SUSPENSION &amp; CHASSIS <span class="ar">التعليق والهيكل</span></h3>
+        <div class="row"><div class="k">Front Suspension<small>التعليق الأمامي</small></div><div class="v">MacPherson Strut Independent<span class="ar">مستقل بنظام ماكفرسون</span></div></div>
+        <div class="row"><div class="k">Rear Suspension<small>التعليق الخلفي</small></div><div class="v">Multi-Link Independent<span class="ar">مستقل متعدد الوصلات</span></div></div>
+        <div class="row"><div class="k">Suspension System<small>نظام التعليق</small></div><div class="v empty">Not set · <a href="#">Add</a></div></div>
+        <div class="row"><div class="k">Drivetrain<small>نظام نقل الحركة</small></div><div class="v">Intelligent All-Wheel Drive<span class="ar">دفع رباعي ذكي.</span></div></div>
+        <div class="row"><div class="k">L × W × H<small>الأبعاد</small></div><div class="v">4,820 × 1,930 × 1,690 mm<span class="tag">Spec sheet only</span></div></div>
+        <div class="row"><div class="k">Wheels<small>مواصفات العجلات</small></div><div class="v">21-inch alloy, 265/40 R21<span class="tag">Spec sheet only</span></div></div>
+
+        <h3 style="border-top:1px solid var(--line2)">FUEL CONSUMPTION <span class="ar">استهلاك الوقود</span></h3>
+        <div class="row"><div class="k">Claimed Fuel<small>استهلاك الوقود</small></div><div class="v">Approximately 1.2 L/100 km<span class="ar">حوالي 1.2 لتر لكل 100 كم</span></div></div>
+        <div class="row"><div class="k">Fuel Tank<small>سعة خزان الوقود</small></div><div class="v empty">Not set · <a href="#">Add</a></div></div>
+        <div class="row"><div class="k">Powertrain Type<small>نوع النظام</small></div><div class="v">Plug-In Hybrid (PHEV)<span class="ar">سيارة هجينة قابلة للشحن.</span></div></div>
+      </div>
+
+      <div class="card">
+        <h3>INTERIOR SPECS <span class="ar">المقصورة الداخلية</span></h3>
+        <div class="row"><div class="k">Seating<small>عدد المقاعد</small></div><div class="v">7-Seater Family SUV<span class="ar">سيارة عائلية بسبعة مقاعد.</span></div></div>
+        <div class="row"><div class="k">Wheelbase<small>قاعدة العجلات</small></div><div class="v empty">Not set · <a href="#">Add</a></div></div>
+        <div class="list">
+          <div class="li"><span>Dual 14.6-inch Displays</span><span class="ar">شاشتان قياس 14.6 بوصة.</span></div>
+          <div class="li"><span>Panoramic Glass Roof</span><span class="ar">سقف زجاجي بانورامي.</span></div>
+          <div class="li"><span>Heated and Ventilated Front Seats</span><span class="ar">مقاعد أمامية مدفأة ومهوّاة.</span></div>
+          <div class="li"><span>18-Speaker Premium Audio</span><span class="tag miss">Arabic missing</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>SMART DRIVING <span class="ar">القيادة الذكية</span></h3>
+        <div class="list">
+          <div class="li"><span>Adaptive Cruise Control (ACC)</span><span class="ar">مثبت السرعة التكيفي</span></div>
+          <div class="li"><span>Lane Keeping Assist (LKA)</span><span class="ar">مساعد البقاء في المسار</span></div>
+          <div class="li"><span>Automatic Emergency Braking (AEB)</span><span class="ar">نظام الكبح التلقائي</span></div>
+          <div class="li"><span>360° Surround-View Camera</span><span class="ar">كاميرا محيطية 360 درجة</span></div>
+          <div class="li"><span>Blind-Spot Monitoring (BSM)</span><span class="ar">مراقبة النقطة العمياء</span></div>
+        </div>
+        <h3 style="border-top:1px solid var(--line2)">DRIVE MODES <span class="ar">أوضاع القيادة</span></h3>
+        <div class="chips"><span class="chip">Eco<span class="ar">الاقتصادي</span></span><span class="chip">Comfort<span class="ar">المريح</span></span><span class="chip">Sport<span class="ar">الرياضي</span></span><span class="chip">Off-Road<span class="ar">الطرق الوعرة</span></span></div>
+      </div>
+
+      <div class="card full">
+        <h3>KEY FEATURES — SPEC SHEET <span class="count">10 / 10</span></h3>
+        <div class="kf">
+          <div>Up to 1,120 km combined range</div><div>Adaptive dampers</div>
+          <div>Dual 14.6" displays</div><div>Heated &amp; ventilated front seats</div>
+          <div>Nappa leather upholstery</div><div>18-speaker premium audio</div>
+          <div>Panoramic glass roof</div><div>Three-zone climate control</div>
+          <div>Level 2 driver assistance</div><div>360° camera &amp; blind-spot monitoring</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="other">▸ Other information from documents (not printed) · 6 items</div>
+    <p class="note">Mockup with a fictional car. Sections, order and labels come from fields.json — the same list the spec sheet and brochure use.</p>
+  </div>
+</main>
+</body></html>

@@ -1,9 +1,10 @@
-import { AlertTriangle, BadgeCheck, CheckCircle2, Download, Eye, FilePlus2, FileText, History, Replace, Trash2 } from 'lucide-react'
+import { AlertTriangle, BadgeCheck, CheckCircle2, Download, Eye, FilePlus2, FileText, History, ImagePlus, Presentation, Replace, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { useDocuments, useUpdateDocument, useUploadDocument } from '@/api/records'
-import { Button } from '@/components/ui/button'
+import { useDocuments, useImages, useUpdateDocument, useUploadDocument } from '@/api/records'
+import { Link } from 'react-router-dom'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { ConfirmDialog, Dialog } from '@/components/ui/dialog'
 import { Field, Input, Select } from '@/components/ui/form'
 import { Empty, ErrorNote, PageLoader, Panel, PanelHeader, Spinner } from '@/components/ui/misc'
@@ -14,7 +15,8 @@ import { downloadFile, openFile, useSignedUrl, validateFile } from '@/lib/files'
 import { fmtBytes, fmtDateTime } from '@/lib/format'
 import { DOCUMENT_LABEL } from '@/lib/labels'
 import { friendlyError } from '@/lib/supabase'
-import type { DocumentRow, DocumentType } from '@/lib/types'
+import type { DocumentRow, DocumentType, ImageRow } from '@/lib/types'
+import { AddPhotos } from './PhotosTab'
 import { findCandidates, normalizeChassis } from '@/lib/vin'
 
 type Check = { state: 'match' | 'mismatch' | 'none' | 'scan'; found: string[]; text: string | null }
@@ -46,12 +48,14 @@ export function DocumentsTab({ vehicleId, chassis }: { vehicleId: string; chassi
 
   if (q.isLoading) return <PageLoader />
   if (q.error) return <ErrorNote error={q.error} />
-  const all = q.data!
+  const all = q.data!.filter((d) => d.document_type !== 'brochure')
   const current = all.filter((d) => !d.superseded_at)
 
   return (
+    <div className="space-y-5">
+    <GeneratedDocuments vehicleId={vehicleId} brochures={q.data!.filter((d) => d.document_type === 'brochure')} />
     <Panel>
-      <PanelHeader title={t('docs.title')}>
+      <PanelHeader title={t('generated.uploaded')}>
         {canWrite && <Button variant="primary" size="sm" onClick={() => setUpload({})}><FilePlus2 /> {t('docs.upload')}</Button>}
       </PanelHeader>
       {current.length === 0 ? (
@@ -113,6 +117,7 @@ export function DocumentsTab({ vehicleId, chassis }: { vehicleId: string; chassi
         {t('docs.removeBody')}
       </ConfirmDialog>
     </Panel>
+    </div>
   )
 }
 
@@ -213,5 +218,99 @@ function VerifyDialog({ doc, chassis, onClose, onVerify }: { doc: DocumentRow; c
         <DocPreview src={url.data} isPdf={doc.mime_type === 'application/pdf'} className="max-h-[65dvh]" />
       </div>
     </Dialog>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Generated documents: spec sheets (stored as the information card) and brochures.
+// ---------------------------------------------------------------------------
+
+function CardThumb({ img }: { img: ImageRow }) {
+  const url = useSignedUrl(img.thumbnail_path ?? (img.mime_type.startsWith('image/') ? img.storage_path : null))
+  return (
+    <span className="flex h-16 w-12 shrink-0 items-center justify-center overflow-hidden rounded-sm border border-line-soft bg-raised">
+      {url.data ? <img src={url.data} alt="" className="size-full object-cover object-top" /> : <FileText className="size-5 text-ink-3" />}
+    </span>
+  )
+}
+
+type Version = { id: string; name: string; at: string; path: string }
+
+function GeneratedRow({ icon, title, current, earlier, thumb }: {
+  icon: React.ReactNode; title: string; current: Version; earlier: Version[]; thumb?: React.ReactNode
+}) {
+  const { t } = useTranslation(['vehicle', 'common'])
+  const [open, setOpen] = useState(false)
+  return (
+    <li className="px-4 py-3">
+      <div className="flex flex-wrap items-center gap-3">
+        {thumb ?? <span className="flex h-16 w-12 shrink-0 items-center justify-center rounded-sm border border-line-soft bg-raised text-ink-3">{icon}</span>}
+        <div className="min-w-0 flex-1">
+          <p className="text-[13.5px] font-medium">{title}</p>
+          <p className="truncate text-[12.5px] text-ink-3" dir="auto">{current.name} · {fmtDateTime(current.at)}</p>
+          {earlier.length > 0 && (
+            <button className="text-[12.5px] text-ink-2 underline hover:text-ink" onClick={() => setOpen(!open)}>{t('generated.earlier', { count: earlier.length })}</button>
+          )}
+        </div>
+        <div className="flex gap-1">
+          <Button variant="ghost" size="icon-sm" title={t('common:actions.open')} aria-label={t('common:actions.open')} onClick={() => openFile(current.path)}><Eye /></Button>
+          <Button variant="ghost" size="icon-sm" title={t('common:actions.download')} aria-label={t('common:actions.download')} onClick={() => downloadFile(current.path, current.name)}><Download /></Button>
+        </div>
+      </div>
+      {open && (
+        <ul className="ms-14 mt-2 space-y-1 border-s border-line ps-3">
+          {earlier.map((o) => (
+            <li key={o.id} className="flex items-center gap-3 text-[12.5px] text-ink-2">
+              <span dir="auto">{o.name} · {fmtDateTime(o.at)}</span>
+              <button className="text-accent underline" onClick={() => downloadFile(o.path, o.name)}>{t('common:actions.download')}</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </li>
+  )
+}
+
+function GeneratedDocuments({ vehicleId, brochures }: { vehicleId: string; brochures: DocumentRow[] }) {
+  const { t } = useTranslation(['vehicle', 'common'])
+  const { company, canWrite } = useCompany()
+  const imgs = useImages(vehicleId)
+  const [addCard, setAddCard] = useState(false)
+  const cards = (imgs.data ?? []).filter((i) => i.image_type === 'information_card' && !i.deleted_at)
+    .sort((a, b) => b.uploaded_at.localeCompare(a.uploaded_at))
+  const card = cards.find((c) => !c.superseded_at) ?? null
+  const groups = [...new Set(brochures.filter((d) => !d.deleted_at).map((d) => d.group_id))].map((g) =>
+    brochures.filter((d) => d.group_id === g && !d.deleted_at).sort((a, b) => b.version - a.version))
+  const asVersion = (x: { id: string; original_filename: string; uploaded_at: string; storage_path: string }): Version =>
+    ({ id: x.id, name: x.original_filename, at: x.uploaded_at, path: x.storage_path })
+
+  return (
+    <Panel>
+      <PanelHeader title={t('generated.title')}>
+        {canWrite && (
+          <>
+            <Button size="sm" variant="ghost" onClick={() => setAddCard(true)}><ImagePlus />{card ? t('photos.replaceCard') : t('photos.addCard')}</Button>
+            <Link to={`/vehicles/${vehicleId}/documents`} className={buttonVariants({ size: 'sm', variant: 'primary' })}><Presentation />{t('generated.create')}</Link>
+          </>
+        )}
+      </PanelHeader>
+      <p className="border-b border-line-soft px-4 py-2 text-[12.5px] text-ink-3">{t('generated.hint')}</p>
+      {!card && !groups.length ? (
+        <p className="px-4 py-4 text-[13px] text-ink-3">{t('generated.empty')}</p>
+      ) : (
+        <ul className="divide-y divide-line-soft">
+          {card && (
+            <GeneratedRow icon={<FileText className="size-5" />} thumb={<CardThumb img={card} />}
+              title={card.mime_type === 'application/pdf' ? t('generated.specSheet') : t('generated.infoCard')}
+              current={asVersion(card)} earlier={cards.filter((c) => c.id !== card.id).map(asVersion)} />
+          )}
+          {groups.map((g) => (
+            <GeneratedRow key={g[0].id} icon={<Presentation className="size-5" />} title={t('generated.brochure')}
+              current={asVersion(g[0])} earlier={g.slice(1).map(asVersion)} />
+          ))}
+        </ul>
+      )}
+      {addCard && <AddPhotos companyId={company.id} vehicleId={vehicleId} type="information_card" onClose={() => setAddCard(false)} />}
+    </Panel>
   )
 }

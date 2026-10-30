@@ -47,6 +47,12 @@ export default {
     listing_price: 'Asking price',
   },
   review: {
+    identity: 'Vehicle description',
+    notInFiles_one: '{{count}} field not in these files',
+    notInFiles_other: '{{count}} fields not in these files',
+    other_one: 'Other information ({{count}}): kept, not printed',
+    other_other: 'Other information ({{count}}): kept, not printed',
+    otherHint: 'Facts that match no field. Assign them to a field later on the car page.',
     vehicleFields: 'Vehicle details',
     chooseOne: 'Choose one',
     suggested: 'Suggestion',

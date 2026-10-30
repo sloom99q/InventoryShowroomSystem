@@ -164,3 +164,82 @@ export function groupBySection<T extends { section: string | null }>(rows: T[]) 
   }
   return [...map.entries()]
 }
+
+// ---------------------------------------------------------------------------
+// Fixed fields (kit/fields.json): where each extracted fact lands
+// ---------------------------------------------------------------------------
+
+export type BiCandidate = { en: string; ar: string | null; sources: SourceRef[]; raw: string; unit: string | null }
+export type BiChoice = { kind: 'candidate'; index: number } | { kind: 'custom'; en: string; ar: string } | { kind: 'keep' } | null
+
+export type Placement = {
+  /** field key → candidate values (distinct English values; Arabic attached when known). */
+  fields: Map<string, BiCandidate[]>
+  /** list key → items in first-seen order. */
+  lists: Map<string, BiCandidate[]>
+  /** Facts that match no field. */
+  other: MergedFact[]
+}
+
+const normV = (s: string) => s.toLowerCase().replace(/[\s,]+/g, ' ').trim()
+
+/**
+ * Place merged facts onto the fixed fields. `matchField`/`matchList` come from
+ * the catalogue; vehicle columns (chassis, brand…) are handled by buildCandidates.
+ */
+export function placeFacts(
+  merged: MergedFact[],
+  matchField: (label: string | null | undefined) => string | null,
+  matchList: (section: string | null | undefined) => string | null,
+  vehicleColumnKeys: Set<string>,
+): Placement {
+  const fields = new Map<string, BiCandidate[]>()
+  const lists = new Map<string, BiCandidate[]>()
+  const other: MergedFact[] = []
+  const push = (map: Map<string, BiCandidate[]>, key: string, v: MergedFact['values'][number]) => {
+    const en = [v.value, v.unit].filter(Boolean).join(' ').trim()
+    const list = map.get(key) ?? []
+    const hit = list.find((c) => normV(c.en) === normV(en))
+    if (hit) {
+      for (const s of v.sources) if (!hit.sources.some((x) => x.fileKey === s.fileKey && x.page === s.page)) hit.sources.push(s)
+      hit.ar ??= v.valueAlt ?? null
+    } else list.push({ en, ar: v.valueAlt ?? null, sources: [...v.sources], raw: v.raw, unit: v.unit })
+    map.set(key, list)
+  }
+  for (const m of merged) {
+    if (m.core && m.core !== 'document_date') continue // vehicle columns, title, chassis: handled elsewhere
+    if (m.kind === 'item') {
+      const list = matchList(m.section) ?? matchList(m.label)
+      if (list) { for (const v of m.values) push(lists, list, v); continue }
+      other.push(m)
+      continue
+    }
+    const key = matchField(m.label) ?? matchField(m.labelAlt)
+    if (key && !vehicleColumnKeys.has(key)) { for (const v of m.values) push(fields, key, v); continue }
+    other.push(m)
+  }
+  return { fields, lists, other }
+}
+
+/** Starting choice for a field: one stated value is pre-selected unless it disagrees with what's saved. */
+export function defaultBiChoice(cands: BiCandidate[], current: { en: string | null } | undefined): BiChoice {
+  if (cands.length === 1) {
+    if (current?.en && normV(current.en) !== normV(cands[0].en)) return null
+    return { kind: 'candidate', index: 0 }
+  }
+  if (cands.length > 1) return null
+  return { kind: 'keep' }
+}
+
+export function biNeedsDecision(cands: BiCandidate[], current: { en: string | null } | undefined) {
+  return cands.length > 1 || (cands.length === 1 && !!current?.en && normV(current.en) !== normV(cands[0].en))
+}
+
+export function chosenBi(choice: BiChoice, cands: BiCandidate[]): { en: string | null; ar: string | null } | null {
+  if (!choice || choice.kind === 'keep') return null
+  if (choice.kind === 'custom') return { en: choice.en.trim() || null, ar: choice.ar.trim() || null }
+  const c = cands[choice.index]
+  if (!c) return null
+  // Arabic from another document stating the same field, when the chosen one has none.
+  return { en: c.en, ar: c.ar ?? cands.find((x) => x.ar)?.ar ?? null }
+}

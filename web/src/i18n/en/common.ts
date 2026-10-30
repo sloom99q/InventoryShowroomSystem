@@ -65,6 +65,7 @@ export default {
     delivered: 'Delivered',
   },
   documentType: {
+    brochure: 'Brochure',
     vehicle_pdf: 'Vehicle PDF',
     registration: 'Registration',
     inspection: 'Inspection',

@@ -12,3 +12,4 @@ web/e2e/screens/
 web/node_modules/.tmp/
 supabase/.temp/
 supabase/.branches/
+web/e2e/docs-out/
