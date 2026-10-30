@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, CheckCircle2, CircleAlert } from 'lucide-react'
+import { Trans, useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { findByChassis } from '@/api/vehicles'
 import { checkChassis } from '@/lib/vin'
@@ -14,6 +15,7 @@ export function ChassisInput({ value, onChange, excludeId, autoFocus, id }: {
   autoFocus?: boolean
   id?: string
 }) {
+  const { t } = useTranslation(['add', 'common'])
   const check = checkChassis(value)
   const deferred = useDeferredValue(check.normalized)
   const dup = useQuery({
@@ -32,6 +34,7 @@ export function ChassisInput({ value, onChange, excludeId, autoFocus, id }: {
         autoFocus={autoFocus}
         autoComplete="off"
         autoCapitalize="characters"
+        dir="ltr"
         spellCheck={false}
         placeholder="LVVDB21B9PD012345"
         aria-invalid={!!existing || (value.length > 0 && check.errors.length > 0)}
@@ -40,15 +43,15 @@ export function ChassisInput({ value, onChange, excludeId, autoFocus, id }: {
       <div className="mt-2 min-h-5 space-y-1.5 text-[13px]" aria-live="polite">
         {value && (
           <p className="tnum text-ink-3">
-            {check.normalized.length} characters
-            {check.kind === 'vin17' && check.years.length > 0 && ` · model year ${check.years.join(' or ')} by VIN code`}
+            {t('chassis.characters', { count: check.normalized.length })}
+            {check.kind === 'vin17' && check.years.length > 0 && ` · ${t('chassis.modelYear', { years: check.years.join(t('chassis.or')) })}`}
           </p>
         )}
         {existing ? (
           <p className="flex items-center gap-2 text-danger">
             <CircleAlert className="size-4 shrink-0" />
             <span>
-              This chassis is already registered{existing.archived_at ? ' (archived)' : ''}:{' '}
+              {existing.archived_at ? t('chassis.alreadyRegisteredArchived') : t('chassis.alreadyRegistered')}{' '}
               <Link to={`/vehicles/${existing.id}`} className="underline">{[existing.brand, existing.model].filter(Boolean).join(' ') || existing.chassis_number}</Link>
             </span>
           </p>
@@ -60,11 +63,11 @@ export function ChassisInput({ value, onChange, excludeId, autoFocus, id }: {
         ))}
         {!existing && check.suggestion && (
           <button type="button" onClick={() => onChange(check.suggestion!)} className="text-[13px] text-accent underline">
-            Use <span className="vin">{check.suggestion}</span> instead
+            <Trans t={t} i18nKey="chassis.useInstead" values={{ value: check.suggestion }} components={[<span key="v" className="vin" />]} />
           </button>
         )}
         {!existing && check.kind === 'vin17' && check.checkDigitValid && !check.warnings.length && (
-          <p className={cn('flex items-center gap-2 text-ok')}><CheckCircle2 className="size-4" />Valid VIN format and check digit</p>
+          <p className={cn('flex items-center gap-2 text-ok')}><CheckCircle2 className="size-4" />{t('chassis.valid')}</p>
         )}
       </div>
     </div>

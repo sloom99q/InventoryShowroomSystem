@@ -1,29 +1,38 @@
 import { formatInTimeZone, fromZonedTime } from 'date-fns-tz'
+import i18n, { intlLocale } from '@/i18n'
 
 export const TZ = 'Asia/Dubai'
 
-/** "12 Oct 2026, 15:30" in UAE time. */
+const dtCache = new Map<string, Intl.DateTimeFormat>()
+function dtf(opts: Intl.DateTimeFormatOptions, zone = TZ) {
+  const key = `${intlLocale()}|${zone}|${JSON.stringify(opts)}`
+  let f = dtCache.get(key)
+  if (!f) dtCache.set(key, (f = new Intl.DateTimeFormat(intlLocale(), { ...opts, timeZone: zone })))
+  return f
+}
+
+/** "12 Oct 2026, 15:30" / "12 أكتوبر 2026، 15:30" in UAE time. */
 export function fmtDateTime(iso: string | null | undefined): string {
   if (!iso) return '—'
-  return formatInTimeZone(new Date(iso), TZ, 'd MMM yyyy, HH:mm')
+  return dtf({ day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(iso))
 }
 
 export function fmtDate(iso: string | null | undefined): string {
   if (!iso) return '—'
   // Plain dates (yyyy-mm-dd) have no zone; don't shift them.
-  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return formatInTimeZone(new Date(`${iso}T12:00:00Z`), 'UTC', 'd MMM yyyy')
-  return formatInTimeZone(new Date(iso), TZ, 'd MMM yyyy')
+  if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) return dtf({ day: 'numeric', month: 'short', year: 'numeric' }, 'UTC').format(new Date(`${iso}T12:00:00Z`))
+  return dtf({ day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(iso))
 }
 
 export function fmtRelative(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime()
   const min = Math.round(diff / 60000)
-  if (min < 1) return 'just now'
-  if (min < 60) return `${min} min ago`
+  if (min < 1) return i18n.t('time.justNow')
+  if (min < 60) return i18n.t('time.minAgo', { count: min })
   const h = Math.round(min / 60)
-  if (h < 24) return `${h} h ago`
+  if (h < 24) return i18n.t('time.hAgo', { count: h })
   const d = Math.round(h / 24)
-  if (d < 7) return `${d} d ago`
+  if (d < 7) return i18n.t('time.dAgo', { count: d })
   return fmtDate(iso)
 }
 
@@ -47,13 +56,16 @@ export function todayDubai(): string {
   return formatInTimeZone(new Date(), TZ, 'yyyy-MM-dd')
 }
 
-const money = new Intl.NumberFormat('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const moneyShort = new Intl.NumberFormat('en-AE', { maximumFractionDigits: 0 })
-
 export function fmtMoney(v: number | string | null | undefined, currency = 'AED', short = false): string {
   if (v === null || v === undefined || v === '') return '—'
   const n = typeof v === 'string' ? Number(v) : v
-  return `${currency} ${(short ? moneyShort : money).format(n)}`
+  return new Intl.NumberFormat(intlLocale(), {
+    style: 'currency',
+    currency,
+    currencyDisplay: i18n.language === 'ar' ? 'symbol' : 'code',
+    minimumFractionDigits: short ? 0 : 2,
+    maximumFractionDigits: short ? 0 : 2,
+  }).format(n).replace(/\u00a0/g, ' ')
 }
 
 /** Sum money in integer fils so 0.1 + 0.2 never shows up as 0.30000000004. */
@@ -70,7 +82,7 @@ export function parseAmount(input: string): string | null {
 
 export function fmtKm(v: number | null | undefined): string {
   if (v === null || v === undefined) return '—'
-  return `${new Intl.NumberFormat('en-AE').format(v)} km`
+  return i18n.t('terms.km', { value: new Intl.NumberFormat(intlLocale()).format(v) })
 }
 
 export function fmtBytes(n: number): string {

@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { useEffect, useRef, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { Button } from './button'
 
@@ -15,6 +16,7 @@ type Props = {
 
 /** Native <dialog>: focus trapping, Esc and top-layer for free. */
 export function Dialog({ open, onClose, title, description, children, footer, size = 'md' }: Props) {
+  const { t } = useTranslation()
   const ref = useRef<HTMLDialogElement>(null)
   useEffect(() => {
     const d = ref.current
@@ -33,7 +35,7 @@ export function Dialog({ open, onClose, title, description, children, footer, si
       }}
       onClick={(e) => e.target === ref.current && onClose()}
       className={cn(
-        'm-auto max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-line bg-surface p-0 text-ink shadow-2xl shadow-black/50 open:flex open:flex-col',
+        'm-auto max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-line bg-surface p-0 text-ink shadow-xl shadow-black/20 open:flex open:flex-col',
         { sm: 'max-w-sm', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-5xl' }[size],
       )}
     >
@@ -44,7 +46,7 @@ export function Dialog({ open, onClose, title, description, children, footer, si
               <h2 className="text-[16px] font-semibold">{title}</h2>
               {description && <div className="mt-0.5 text-[13px] text-ink-2">{description}</div>}
             </div>
-            <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label="Close">
+            <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label={t('actions.close')}>
               <X />
             </Button>
           </header>
@@ -66,6 +68,7 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, children, confi
   loading?: boolean
   danger?: boolean
 }) {
+  const { t } = useTranslation()
   return (
     <Dialog
       open={open}
@@ -74,7 +77,7 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, children, confi
       size="sm"
       footer={
         <>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="ghost" onClick={onClose}>{t('actions.cancel')}</Button>
           <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm} loading={loading}>{confirmLabel}</Button>
         </>
       }

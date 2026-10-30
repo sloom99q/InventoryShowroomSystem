@@ -3,6 +3,8 @@
 // We NEVER silently correct a chassis number. Detected problems become flags
 // and suggestions that a person confirms.
 
+import i18n from '@/i18n'
+
 export const VIN_LENGTH = 17
 const VIN_ALPHABET = new Set('ABCDEFGHJKLMNPRSTUVWXYZ0123456789')
 const FORBIDDEN: Record<string, string> = { I: '1', O: '0', Q: '0' }
@@ -66,25 +68,25 @@ export function checkChassis(raw: string): ChassisCheck {
   let suggestion: string | null = null
   let checkDigitValid: boolean | null = null
 
-  if (v.length < 5) errors.push('Too short for a chassis number')
-  if (v.length > 30) errors.push('Too long for a chassis number')
+  if (v.length < 5) errors.push(i18n.t('chassisCheck.tooShort'))
+  if (v.length > 30) errors.push(i18n.t('chassisCheck.tooLong'))
 
   const kind: ChassisCheck['kind'] = errors.length ? 'invalid' : v.length === VIN_LENGTH ? 'vin17' : 'nonstandard'
 
   if (kind === 'vin17') {
     const forbidden = [...v].map((c, i) => (c in FORBIDDEN ? i : -1)).filter((i) => i >= 0)
     if (forbidden.length) {
-      warnings.push(`VINs never use the letters I, O or Q (found at position ${forbidden.map((i) => i + 1).join(', ')})`)
+      warnings.push(i18n.t('chassisCheck.forbidden', { positions: forbidden.map((i) => i + 1).join(', ') }))
       suggestion = [...v].map((c) => FORBIDDEN[c] ?? c).join('')
     }
     const cd = checkDigit(suggestion ?? v)
     if (cd !== null) {
       checkDigitValid = (suggestion ?? v)[8] === cd
       if (!checkDigitValid)
-        warnings.push('Check digit does not match. Normal for many non-US vehicles; double-check the characters.')
+        warnings.push(i18n.t('chassisCheck.checkDigit'))
     }
   } else if (kind === 'nonstandard') {
-    warnings.push(`${v.length} characters, not a standard 17-character VIN. Fine for some manufacturers' frame numbers.`)
+    warnings.push(i18n.t('chassisCheck.nonstandard', { count: v.length }))
   }
   ;[...v].forEach((c, i) => {
     if (c in CONFUSABLE || c in FORBIDDEN) confusable.push(i + 1)

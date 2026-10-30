@@ -1,58 +1,123 @@
 @import "tailwindcss";
-@import "@fontsource-variable/instrument-sans";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-sans-arabic/400.css";
+@import "@fontsource/ibm-plex-sans-arabic/500.css";
+@import "@fontsource/ibm-plex-sans-arabic/600.css";
 @import "@fontsource/ibm-plex-mono/400.css";
 @import "@fontsource/ibm-plex-mono/500.css";
 
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+
 /*
- * Graphite base, one champagne accent. Status colours are muted so the
- * accent stays the only thing that "glows".
+ * Neutrals come from the light/dark mode; brand colours come from the
+ * company's own settings (set as --brand / --chrome at runtime, see theme.ts).
+ * IBM Plex Sans + Plex Sans Arabic are one family, so English and Arabic
+ * text sit together without a visible switch in style.
  */
-@theme {
-  --font-sans: "Instrument Sans Variable", ui-sans-serif, system-ui, sans-serif;
+:root {
+  --brand: #2f5bd3;
+  --brand-ink: #ffffff;
+  --chrome: #ffffff;
+  --chrome-ink: #12161f;
+  --chrome-ink-2: #5b6372;
+  --chrome-line: #e3e6eb;
+  --chrome-hover: #f1f3f6;
+
+  --bg: #f2f3f5;
+  --surface: #ffffff;
+  --raised: #f6f7f9;
+  --hover: #eef0f3;
+  --line: #d5d9e0;
+  --line-soft: #e6e8ec;
+  --ink: #12161f;
+  --ink-2: #4a5262;
+  --ink-3: #7a8291;
+
+  --ok: #1f7a4d;
+  --warn: #a8650a;
+  --info: #2f5bd3;
+  --danger: #c0262d;
+  --violet: #6b4fbf;
+  --neutral: #5b6372;
+}
+
+[data-theme=dark] {
+  --bg: #121418;
+  --surface: #1a1d22;
+  --raised: #22262c;
+  --hover: #2a2f36;
+  --line: #343a42;
+  --line-soft: #262a30;
+  --ink: #eceef1;
+  --ink-2: #a5abb4;
+  --ink-3: #737a85;
+
+  --ok: #6cc196;
+  --warn: #e0a84a;
+  --info: #7fa6ea;
+  --danger: #f07d78;
+  --violet: #ad9be6;
+  --neutral: #a5abb4;
+}
+
+@theme inline {
+  --font-sans: "IBM Plex Sans", "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, monospace;
 
-  --color-bg: #16181b;
-  --color-surface: #1d2024;
-  --color-raised: #25292e;
-  --color-hover: #2c3036;
-  --color-line: #32373d;
-  --color-line-soft: #272b30;
-  --color-ink: #eceae6;
-  --color-ink-2: #a3a7ad;
-  --color-ink-3: #71767d;
-  --color-accent: #cdb07a;
-  --color-accent-ink: #1a1710;
-  --color-accent-soft: #cdb07a1f;
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-hover: var(--hover);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent: var(--brand);
+  --color-accent-ink: var(--brand-ink);
+  --color-chrome: var(--chrome);
+  --color-chrome-ink: var(--chrome-ink);
+  --color-chrome-ink-2: var(--chrome-ink-2);
+  --color-chrome-line: var(--chrome-line);
+  --color-chrome-hover: var(--chrome-hover);
 
-  --color-ok: #86b79c;
-  --color-warn: #d8a650;
-  --color-info: #86a9d6;
-  --color-danger: #e07a6e;
-  --color-violet: #a99bd4;
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-info: var(--info);
+  --color-danger: var(--danger);
+  --color-violet: var(--violet);
+  --color-neutral: var(--neutral);
 
-  --radius-sm: 5px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
 }
 
 @layer base {
-  html { color-scheme: dark; -webkit-text-size-adjust: 100%; }
+  html { -webkit-text-size-adjust: 100%; color-scheme: light; }
+  html[data-theme=dark] { color-scheme: dark; }
   body {
     @apply bg-bg text-ink font-sans antialiased;
     font-size: 14px;
     line-height: 1.5;
-    font-feature-settings: "ss01", "cv11";
   }
-  ::selection { background: var(--color-accent); color: var(--color-accent-ink); }
-  :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 4px; }
-  h1, h2, h3 { letter-spacing: -0.012em; text-wrap: balance; }
+  html[lang=ar] body { font-size: 14.5px; line-height: 1.65; }
+  ::selection { background: var(--brand); color: var(--brand-ink); }
+  :focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+  h1, h2, h3 { letter-spacing: -0.01em; text-wrap: balance; }
+  html[lang=ar] h1, html[lang=ar] h2, html[lang=ar] h3 { letter-spacing: 0; }
   input, select, textarea, button { font: inherit; }
-  dialog::backdrop { background: rgb(8 9 10 / 0.7); backdrop-filter: blur(2px); }
+  input[type=checkbox], input[type=radio] { accent-color: var(--brand); }
+  dialog::backdrop { background: rgb(10 12 16 / 0.55); }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
   }
 }
 
 @utility tnum { font-variant-numeric: tabular-nums; }
-/* Slashed zero keeps 0 and O apart in chassis numbers. */
-@utility vin { font-family: var(--font-mono); font-feature-settings: "zero"; letter-spacing: 0.02em; }
+/* Slashed zero keeps 0 and O apart in chassis numbers. Always left-to-right. */
+@utility vin { font-family: var(--font-mono); font-feature-settings: "zero"; letter-spacing: 0.02em; direction: ltr; unicode-bidi: isolate; }
+/* Directional icons (arrows, chevrons) mirror in Arabic. */
+@utility flip-rtl { &:where([dir=rtl] *) { transform: scaleX(-1); } }

@@ -8,10 +8,10 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-accent text-accent-ink hover:bg-[#d9bf8f]',
-        secondary: 'bg-raised text-ink border border-line hover:bg-hover',
+        primary: 'bg-accent text-accent-ink hover:brightness-110',
+        secondary: 'bg-surface text-ink border border-line hover:bg-hover',
         ghost: 'text-ink-2 hover:text-ink hover:bg-raised',
-        danger: 'bg-danger/15 text-danger border border-danger/30 hover:bg-danger/25',
+        danger: 'bg-surface text-danger border border-danger/40 hover:bg-danger/10',
       },
       size: {
         sm: 'h-8 px-3 text-[13px]',

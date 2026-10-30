@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import i18n from '@/i18n'
 import { BUCKET, supabase } from './supabase'
 
 export const MAX_FILE_BYTES = 50 * 1024 * 1024
@@ -26,11 +27,11 @@ export async function sniffFile(file: File): Promise<Sniffed | null> {
 export type Accept = 'pdf_or_image' | 'image'
 
 export async function validateFile(file: File, accept: Accept): Promise<Sniffed> {
-  if (file.size === 0) throw new Error(`${file.name} is empty`)
-  if (file.size > MAX_FILE_BYTES) throw new Error(`${file.name} is larger than 50 MB`)
+  if (file.size === 0) throw new Error(i18n.t('files.empty', { name: file.name }))
+  if (file.size > MAX_FILE_BYTES) throw new Error(i18n.t('files.tooLarge', { name: file.name }))
   const s = await sniffFile(file)
-  if (!s) throw new Error(`${file.name} is not a PDF, JPG, PNG, WebP or HEIC file`)
-  if (accept === 'image' && s.mime === 'application/pdf') throw new Error(`${file.name} is a PDF; upload it under Documents`)
+  if (!s) throw new Error(i18n.t('files.badType', { name: file.name }))
+  if (accept === 'image' && s.mime === 'application/pdf') throw new Error(i18n.t('files.pdfNotPhoto', { name: file.name }))
   return s
 }
 

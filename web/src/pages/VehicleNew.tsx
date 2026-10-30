@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useCreateVehicle } from '@/api/vehicles'
@@ -37,6 +38,7 @@ function Section({ n, title, hint, children }: { n: number; title: string; hint?
 }
 
 export function VehicleNew() {
+  const { t } = useTranslation(['add', 'common'])
   const { company } = useCompany()
   const nav = useNavigate()
   const create = useCreateVehicle()
@@ -62,13 +64,13 @@ export function VehicleNew() {
 
   async function save(values: VehicleForm) {
     if (!chassis || blocked) return
-    setSaving('Saving vehicle…')
+    setSaving(t('progress.vehicle'))
     try {
       const v = await create.mutateAsync({ ...fromForm(values), chassis_number: chassis.trim(), chassis_verified: verified })
       const problems: string[] = []
       // Follow-up uploads. A failure here never loses the vehicle record.
       if (pdf) {
-        setSaving('Uploading document…')
+        setSaving(t('progress.document'))
         try {
           const s = await validateFile(pdf.file, 'pdf_or_image')
           const path = objectPath(company.id, v.id, 'documents', s.ext)
@@ -79,10 +81,10 @@ export function VehicleNew() {
             verification_status: verified ? 'verified' : 'unverified',
           })
           if (error) throw error
-        } catch (e) { problems.push(`document: ${friendlyError(e)}`) }
+        } catch (e) { problems.push(t('problems.document', { error: friendlyError(e) })) }
       }
       for (const [i, f] of photos.entries()) {
-        setSaving(`Uploading photo ${i + 1} of ${photos.length}…`)
+        setSaving(t('progress.photo', { n: i + 1, total: photos.length }))
         try {
           const up = await uploadImage(company.id, v.id, 'photos', f)
           const { error } = await supabase.from('vehicle_images').insert({ vehicle_id: v.id, image_type: 'arrival', ...up })
@@ -90,7 +92,7 @@ export function VehicleNew() {
         } catch (e) { problems.push(`${f.name}: ${friendlyError(e)}`) }
       }
       if (card[0]) {
-        setSaving('Uploading information card…')
+        setSaving(t('progress.card'))
         try {
           const up = await uploadImage(company.id, v.id, 'card', card[0])
           const { error } = await supabase.rpc('set_information_card', {
@@ -98,22 +100,22 @@ export function VehicleNew() {
             p_original_filename: up.original_filename, p_mime_type: up.mime_type, p_file_size: up.file_size,
           })
           if (error) throw error
-        } catch (e) { problems.push(`information card: ${friendlyError(e)}`) }
+        } catch (e) { problems.push(t('problems.card', { error: friendlyError(e) })) }
       }
       const items: { item_type: 'physical_key' | 'smart_key' | 'nfc_card' | 'charger'; item_name: string; status: ItemStatus; notes?: string }[] = []
       const many = (n: string, type: 'physical_key' | 'smart_key' | 'nfc_card', name: string) => {
         for (let i = 1; i <= Math.min(Number(n) || 0, 10); i++) items.push({ item_type: type, item_name: `${name} ${i}`, status: 'present' })
       }
-      many(kit.physical, 'physical_key', 'Physical key')
-      many(kit.smart, 'smart_key', 'Smart key')
-      many(kit.nfc, 'nfc_card', 'NFC card')
-      if (kit.charger) items.push({ item_type: 'charger', item_name: kit.chargerType.trim() ? `Charger (${kit.chargerType.trim()})` : 'Charger', status: kit.charger })
+      many(kit.physical, 'physical_key', t('common:accessoryType.physical_key'))
+      many(kit.smart, 'smart_key', t('common:accessoryType.smart_key'))
+      many(kit.nfc, 'nfc_card', t('common:accessoryType.nfc_card'))
+      if (kit.charger) items.push({ item_type: 'charger', item_name: kit.chargerType.trim() ? t('kit.chargerNamed', { type: kit.chargerType.trim() }) : t('common:accessoryType.charger'), status: kit.charger })
       if (items.length) {
         const { error } = await supabase.from('accessories').insert(items.map((i) => ({ ...i, vehicle_id: v.id })))
-        if (error) problems.push(`accessories: ${friendlyError(error)}`)
+        if (error) problems.push(t('problems.accessories', { error: friendlyError(error) }))
       }
-      if (problems.length) toast.warning('Vehicle saved, but some files did not upload', { description: problems.join('\n'), duration: 12000 })
-      else toast.success('Vehicle added')
+      if (problems.length) toast.warning(t('toast.partial'), { description: problems.join('\n'), duration: 12000 })
+      else toast.success(t('toast.added'))
       nav(`/vehicles/${v.id}`)
     } catch (e) {
       toast.error(friendlyError(e))
@@ -125,68 +127,68 @@ export function VehicleNew() {
   return (
     <form onSubmit={form.handleSubmit(save)} className="mx-auto max-w-4xl space-y-4 pb-24">
       <div className="mb-2">
-        <h1 className="text-[22px] font-semibold">Add vehicle</h1>
-        <p className="mt-1 text-[13.5px] text-ink-2">Only the chassis number is required. Everything else can be added later.</p>
+        <h1 className="text-[22px] font-semibold">{t('title')}</h1>
+        <p className="mt-1 text-[13.5px] text-ink-2">{t('intro')}</p>
       </div>
 
-      <Section n={1} title="Chassis number" hint="The vehicle's identity. It must match the documents exactly.">
+      <Section n={1} title={t('sections.chassis')} hint={t('sections.chassisHint')}>
         <ChassisInput value={chassis} onChange={(v) => { setChassis(v); setVerified(false) }} autoFocus />
         <div className="mt-4">
           <PdfReader onRead={onPdfRead} picked={check.normalized} onPick={(c) => { setChassis(c.value); setVerified(false) }} />
         </div>
         {chassis && !blocked && (
           <label className="mt-4 flex cursor-pointer items-start gap-2.5 text-[13.5px]">
-            <input type="checkbox" checked={verified} onChange={(e) => setVerified(e.target.checked)} className="mt-0.5 size-4 accent-[#cdb07a]" />
-            <span>I have checked this chassis number character by character against the vehicle's document{pdf ? ' shown above' : ''}.</span>
+            <input type="checkbox" checked={verified} onChange={(e) => setVerified(e.target.checked)} className="mt-0.5 size-4" />
+            <span>{pdf ? t('verifiedCheckShown') : t('verifiedCheck')}</span>
           </label>
         )}
       </Section>
 
-      <Section n={2} title="Vehicle details">
+      <Section n={2} title={t('sections.details')}>
         <VehicleFields form={form} />
       </Section>
 
-      <Section n={3} title="Keys, cards and charger" hint="Each key and card is tracked separately, so you can see what is missing before delivery.">
+      <Section n={3} title={t('sections.kit')} hint={t('sections.kitHint')}>
         <div className="grid gap-4 sm:grid-cols-3">
           {(['physical', 'smart', 'nfc'] as const).map((k) => (
-            <Field key={k} label={{ physical: 'Physical keys', smart: 'Smart / remote keys', nfc: 'NFC key cards' }[k]}>
-              {(id) => <Input id={id} type="number" min={0} max={10} inputMode="numeric" value={kit[k]} onChange={(e) => setKit({ ...kit, [k]: e.target.value })} placeholder="0" />}
+            <Field key={k} label={t(`kit.${k}`)}>
+              {(id) => <Input id={id} type="number" min={0} max={10} inputMode="numeric" dir="ltr" value={kit[k]} onChange={(e) => setKit({ ...kit, [k]: e.target.value })} placeholder="0" />}
             </Field>
           ))}
-          <Field label="Charger">
+          <Field label={t('kit.charger')}>
             {(id) => (
               <Select id={id} value={kit.charger} onChange={(e) => setKit({ ...kit, charger: e.target.value as ItemStatus | '' })}>
-                <option value="">Not applicable</option>
+                <option value="">{t('kit.notApplicable')}</option>
                 {(['present', 'missing', 'unknown'] as const).map((s) => <option key={s} value={s}>{ITEM_STATUS_LABEL[s]}</option>)}
               </Select>
             )}
           </Field>
           {kit.charger && (
-            <Field label="Charger type" className="sm:col-span-2">
-              {(id) => <Input id={id} value={kit.chargerType} onChange={(e) => setKit({ ...kit, chargerType: e.target.value })} placeholder="e.g. Type 2 portable, wall box" />}
+            <Field label={t('kit.chargerType')} className="sm:col-span-2">
+              {(id) => <Input id={id} value={kit.chargerType} onChange={(e) => setKit({ ...kit, chargerType: e.target.value })} placeholder={t('kit.chargerTypePlaceholder')} />}
             </Field>
           )}
         </div>
       </Section>
 
-      <Section n={4} title="Arrival photos and information card" hint="Arrival photos record the car's condition when it came in. You can add more from the vehicle page later.">
+      <Section n={4} title={t('sections.photos')} hint={t('sections.photosHint')}>
         <div className="space-y-5">
           <div>
-            <p className="mb-2 text-[13px] font-medium text-ink-2">Arrival photos</p>
+            <p className="mb-2 text-[13px] font-medium text-ink-2">{t('arrivalPhotos')}</p>
             <PhotoPicker files={photos} onChange={setPhotos} />
           </div>
           <div>
-            <p className="mb-2 text-[13px] font-medium text-ink-2">Information card</p>
-            <PhotoPicker files={card} onChange={setCard} multiple={false} label="Add card" />
+            <p className="mb-2 text-[13px] font-medium text-ink-2">{t('informationCard')}</p>
+            <PhotoPicker files={card} onChange={setCard} multiple={false} label={t('photosPicker.addCard')} />
           </div>
         </div>
       </Section>
 
-      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line-soft bg-bg/95 backdrop-blur lg:start-60">
+      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-line-soft bg-bg/95 backdrop-blur lg:start-64">
         <div className="mx-auto flex max-w-4xl items-center justify-end gap-3 px-4 py-3 sm:px-6">
           {saving && <span className="me-auto text-[13px] text-ink-2">{saving}</span>}
-          <Button variant="ghost" onClick={() => nav(-1)} disabled={!!saving}>Cancel</Button>
-          <Button type="submit" variant="primary" size="lg" loading={!!saving} disabled={!chassis || blocked}>Save vehicle</Button>
+          <Button variant="ghost" onClick={() => nav(-1)} disabled={!!saving}>{t('common:actions.cancel')}</Button>
+          <Button type="submit" variant="primary" size="lg" loading={!!saving} disabled={!chassis || blocked}>{t('save')}</Button>
         </div>
       </div>
     </form>

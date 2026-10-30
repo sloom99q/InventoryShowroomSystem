@@ -6,10 +6,17 @@ export const ADMIN = { email: process.env.E2E_EMAIL ?? 'admin@showroom.local', p
 
 export async function login(page: Page) {
   await page.goto('/')
-  await page.getByLabel('Email').fill(ADMIN.email)
-  await page.getByLabel('Password').fill(ADMIN.password)
-  await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page.getByRole('navigation', { name: 'Main' }).or(page.getByRole('button', { name: 'Open menu' })).first()).toBeVisible()
+  await page.locator('input[type=email]').fill(ADMIN.email)
+  await page.locator('input[type=password]').fill(ADMIN.password)
+  await page.locator('button[type=submit]').click()
+  await expect(page.locator('main')).toBeVisible()
+  // Tests are written against the English UI; reset the account's language if a previous run left it in Arabic.
+  if ((await page.locator('html').getAttribute('lang')) !== 'en') {
+    const menu = page.locator('header button').first()
+    if (!(await page.locator('aside button[lang=en]').first().isVisible())) await menu.click()
+    await page.locator('aside button[lang=en]').last().click()
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  }
 }
 
 /** A random VIN-shaped chassis so tests can run repeatedly against the same database. */

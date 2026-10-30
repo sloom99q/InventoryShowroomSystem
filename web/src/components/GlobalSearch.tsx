@@ -1,5 +1,6 @@
 import { Search } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { useChassisSearch } from '@/api/vehicles'
 import { cn } from '@/lib/cn'
@@ -8,6 +9,7 @@ import { Chassis, StatusBadge, VehicleThumb, vehicleTitle } from './vehicle-bits
 
 /** Type part of a chassis number, press Enter, land on the car. */
 export function GlobalSearch({ className, autoFocus }: { className?: string; autoFocus?: boolean }) {
+  const { t } = useTranslation()
   const [term, setTerm] = useState('')
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(0)
@@ -55,8 +57,8 @@ export function GlobalSearch({ className, autoFocus }: { className?: string; aut
           if (e.key === 'Enter' && rows[active]) go(rows[active].id!)
           if (e.key === 'Escape') { setOpen(false); input.current?.blur() }
         }}
-        placeholder="Search chassis number, brand or model"
-        aria-label="Search vehicles"
+        placeholder={t('search.placeholder')}
+        aria-label={t('search.label')}
         role="combobox"
         aria-expanded={open && rows.length > 0}
         aria-controls="global-search-results"
@@ -66,9 +68,9 @@ export function GlobalSearch({ className, autoFocus }: { className?: string; aut
       />
       <span className="pointer-events-none absolute end-3 top-1/2 hidden -translate-y-1/2 sm:block"><Kbd>⌘K</Kbd></span>
       {open && term.trim().length >= 2 && (
-        <div id="global-search-results" role="listbox" className="absolute inset-x-0 top-full z-30 mt-1.5 overflow-hidden rounded-lg border border-line bg-surface shadow-2xl shadow-black/50">
+        <div id="global-search-results" role="listbox" className="absolute inset-x-0 top-full z-30 mt-1.5 overflow-hidden rounded-lg border border-line bg-surface shadow-xl shadow-black/15">
           {rows.length === 0 ? (
-            <p className="px-4 py-5 text-[13px] text-ink-2">{res.isFetching ? 'Searching…' : `No vehicle matches “${term}”.`}</p>
+            <p className="px-4 py-5 text-[13px] text-ink-2">{res.isFetching ? t('search.searching') : t('search.noMatch', { term })}</p>
           ) : (
             rows.map((v, i) => (
               <button
@@ -83,7 +85,7 @@ export function GlobalSearch({ className, autoFocus }: { className?: string; aut
                 <VehicleThumb path={v.cover_thumbnail_path} className="h-9 w-12" />
                 <div className="min-w-0 flex-1">
                   <Chassis value={v.chassis_number!} highlight={term} className="block text-[13px]" />
-                  <span className="block truncate text-[12.5px] text-ink-2">{vehicleTitle(v)}{v.archived_at ? ' · archived' : ''}</span>
+                  <span className="block truncate text-[12.5px] text-ink-2">{vehicleTitle(v)}{v.archived_at ? ` · ${t('search.archived')}` : ''}</span>
                 </div>
                 <StatusBadge status={v.status!} />
               </button>

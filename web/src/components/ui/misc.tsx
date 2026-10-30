@@ -1,9 +1,10 @@
 import { Loader2 } from 'lucide-react'
+import i18n from '@/i18n'
 import type { ComponentProps, ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 
 export function Spinner({ className }: { className?: string }) {
-  return <Loader2 className={cn('size-5 animate-spin text-ink-3', className)} aria-label="Loading" />
+  return <Loader2 className={cn('size-5 animate-spin text-ink-3', className)} aria-label="…" />
 }
 
 export function PageLoader() {
@@ -39,7 +40,7 @@ export function Empty({ icon, title, children, action }: { icon?: ReactNode; tit
 }
 
 export function ErrorNote({ error }: { error: unknown }) {
-  const msg = error instanceof Error ? error.message : (error as { message?: string })?.message ?? 'Could not load data'
+  const msg = error instanceof Error ? error.message : (error as { message?: string })?.message ?? i18n.t('errors.load')
   return <div className="m-4 rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-[13px] text-danger">{msg}</div>
 }
 

@@ -44,6 +44,18 @@ worker/     Python Docling/OCR scanner — parked, not used by the app yet (see 
 | Staff / technician | photos, expenses, accessories, status changes |
 | Read-only | view only |
 
+## Branding and languages
+
+- **Per-company branding** (Settings → Branding, admins only): logo, optional logo for dark
+  backgrounds, brand colour, sidebar colour, light/dark, default language. Applied app-wide through
+  CSS variables (`web/src/lib/theme.ts`, tokens in `web/src/index.css`); low-contrast colours are flagged.
+- **English and Arabic** with i18next (`web/src/i18n/`). One namespace per screen group, Arabic files
+  are type-checked against English so no key can be missing. Full right-to-left layout; chassis
+  numbers, numbers and dates always render left-to-right. Each user's language is saved on their
+  profile; the company default applies otherwise. Terminology follows UAE showroom usage — loanwords
+  and technical names (شاصي, كراج, VIN, NFC, PDF, Excel) are kept rather than force-translated.
+  Western digits in both languages.
+
 ## Local development
 
 Needs Node 24+, Docker (e.g. `brew install colima docker && colima start`) and the
@@ -56,6 +68,7 @@ cd web && npm install
 cp .env.example .env.local           # local anon key from `supabase status`
 # first company + admin login (service-role key from `supabase status`):
 SUPABASE_SERVICE_ROLE_KEY=... node scripts/bootstrap.mjs "Showroom name" admin@example.com 'password' "Full Name"
+# optional branding: ACCENT=#b3121a SIDEBAR=#ffffff MODE=light LOCALE=ar LOGO=logo.png LOGO_DARK=logo-dark.png
 npm run dev                          # http://127.0.0.1:5173
 ```
 
@@ -71,7 +84,8 @@ supabase test db                 # 27 pgTAP checks: duplicate chassis, tenant is
                                  # privacy, read-only role, exact expense totals, sale dates, audit
 cd web && npm test               # VIN rules, candidate detection, money parsing
 cd web && npx playwright test    # end-to-end: add → document check → expenses → sell → search,
-                                 # PDF chassis reading, phone photo upload (needs a bootstrapped admin)
+                                 # PDF chassis reading, phone photo upload, Arabic/RTL, branding preview
+                                 # (needs a bootstrapped admin)
 ```
 
 ## Deploying (private web app)
@@ -98,6 +112,4 @@ cd web && npx playwright test    # end-to-end: add → document check → expens
   VIN candidate logic with fixtures. Wire it in only if her real files are mostly scans: it would
   poll `document_jobs`, write candidates to `extracted_data`, and the existing verify screen would
   show them. Until then scans are attached and verified by eye.
-- Arabic interface — layout uses logical (RTL-safe) CSS and all enum labels live in
-  `web/src/lib/labels.ts`; page copy still needs extracting into a dictionary.
 - Reports, notifications, information-card generation, bulk folder upload, SaaS billing.

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Receipt } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
 import { PageHeader } from '@/components/AppShell'
 import { Input, Select } from '@/components/ui/form'
@@ -12,6 +13,7 @@ import { supabase } from '@/lib/supabase'
 import type { ExpenseCategory } from '@/lib/types'
 
 export default function Expenses() {
+  const { t } = useTranslation(['pages', 'common'])
   const { company } = useCompany()
   const [params, setParams] = useSearchParams()
   const cat = params.get('category') ?? 'all'
@@ -38,22 +40,22 @@ export default function Expenses() {
 
   return (
     <>
-      <PageHeader title="Expenses" description="All recorded costs across vehicles. Add expenses from a vehicle's page." />
+      <PageHeader title={t('expenses.title')} description={t('expenses.description')} />
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <Select value={cat} onChange={(e) => set('category', e.target.value)} className="w-auto" aria-label="Category">
-          <option value="all">All categories</option>{Object.entries(EXPENSE_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+        <Select value={cat} onChange={(e) => set('category', e.target.value)} className="w-auto" aria-label={t('expenses.category')}>
+          <option value="all">{t('expenses.allCategories')}</option>{Object.entries(EXPENSE_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </Select>
-        <label className="flex items-center gap-2 text-[13px] text-ink-2">From <Input type="date" value={from} onChange={(e) => set('from', e.target.value)} className="w-auto" /></label>
-        <label className="flex items-center gap-2 text-[13px] text-ink-2">to <Input type="date" value={to} onChange={(e) => set('to', e.target.value)} className="w-auto" /></label>
+        <label className="flex items-center gap-2 text-[13px] text-ink-2">{t('expenses.from')} <Input type="date" dir="ltr" value={from} onChange={(e) => set('from', e.target.value)} className="w-auto" /></label>
+        <label className="flex items-center gap-2 text-[13px] text-ink-2">{t('expenses.to')} <Input type="date" dir="ltr" value={to} onChange={(e) => set('to', e.target.value)} className="w-auto" /></label>
       </div>
       {q.isLoading ? <PageLoader /> : q.error ? <ErrorNote error={q.error} /> : (
         <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
           <Panel className="overflow-x-auto">
-            {!rows.length ? <Empty icon={<Receipt />} title="No expenses in this range" /> : (
+            {!rows.length ? <Empty icon={<Receipt />} title={t('expenses.empty')} /> : (
               <table className="w-full text-[13.5px]">
                 <thead><tr className="border-b border-line-soft text-[12.5px] text-ink-3">
-                  <th className="h-10 px-4 text-start font-medium">Date</th><th className="px-3 text-start font-medium">Expense</th>
-                  <th className="px-3 text-start font-medium">Vehicle</th><th className="px-4 text-end font-medium">Amount</th>
+                  <th className="h-10 px-4 text-start font-medium">{t('expenses.col.date')}</th><th className="px-3 text-start font-medium">{t('expenses.col.expense')}</th>
+                  <th className="px-3 text-start font-medium">{t('expenses.col.vehicle')}</th><th className="px-4 text-end font-medium">{t('expenses.col.amount')}</th>
                 </tr></thead>
                 <tbody>
                   {rows.map((r) => (
@@ -70,7 +72,7 @@ export default function Expenses() {
           </Panel>
           <Panel className="h-fit">
             <div className="border-b border-line-soft px-4 py-3">
-              <p className="text-[13px] text-ink-2">Total{cat !== 'all' || from || to ? ' for these filters' : ''}</p>
+              <p className="text-[13px] text-ink-2">{cat !== 'all' || from || to ? t('expenses.totalFiltered') : t('expenses.total')}</p>
               <p className="tnum mt-0.5 text-[22px] font-semibold">{fmtMoney(total, company.currency)}</p>
             </div>
             <table className="w-full text-[13px]"><tbody>

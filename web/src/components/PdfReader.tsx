@@ -1,5 +1,6 @@
 import { FileSearch, ScanLine } from 'lucide-react'
 import { useState } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import { extractFields, type ExtractedFields } from '@/lib/extract'
 import { validateFile } from '@/lib/files'
 import { findCandidates, type Candidate } from '@/lib/vin'
@@ -15,6 +16,7 @@ export type PdfReadResult = { file: File; text: string | null; candidates: Candi
  * browser). Shows the document next to what was found so a person can check it.
  */
 export function PdfReader({ onRead, onPick, picked }: { onRead: (r: PdfReadResult | null) => void; onPick: (c: Candidate) => void; picked?: string }) {
+  const { t } = useTranslation('add')
   const [state, setState] = useState<{ busy: boolean; error?: string; result?: PdfReadResult }>({ busy: false })
 
   async function read(file: File) {
@@ -24,8 +26,8 @@ export function PdfReader({ onRead, onPick, picked }: { onRead: (r: PdfReadResul
       let result: PdfReadResult
       if (s.mime === 'application/pdf') {
         const { extractPdfText } = await import('@/lib/pdfText')
-        const t = await extractPdfText(file)
-        result = { file, text: t.pages.join('\n\f\n'), candidates: t.hasTextLayer ? findCandidates(t.pages) : [], fields: t.hasTextLayer ? extractFields(t.pages) : {}, scanned: !t.hasTextLayer }
+        const pdf = await extractPdfText(file)
+        result = { file, text: pdf.pages.join('\n\f\n'), candidates: pdf.hasTextLayer ? findCandidates(pdf.pages) : [], fields: pdf.hasTextLayer ? extractFields(pdf.pages) : {}, scanned: !pdf.hasTextLayer }
       } else {
         result = { file, text: null, candidates: [], fields: {}, scanned: true }
       }
@@ -51,7 +53,7 @@ export function PdfReader({ onRead, onPick, picked }: { onRead: (r: PdfReadResul
         }}
       >
         {state.busy ? <Spinner className="size-4" /> : <FileSearch className="size-4 text-accent" aria-hidden />}
-        <span>{r ? <>Reading from <b className="font-medium text-ink">{r.file.name}</b>. Choose another file</> : 'Optional: drop the vehicle PDF here to read the chassis number from it'}</span>
+        <span>{r ? <Trans t={t} i18nKey="pdf.readingFrom" values={{ name: r.file.name }} components={[<b key="f" className="font-medium text-ink" dir="auto" />]} /> : t('pdf.dropPrompt')}</span>
         <input type="file" accept="application/pdf,image/*" className="sr-only" onChange={(e) => e.target.files?.[0] && read(e.target.files[0])} />
       </label>
       {state.error && <p className="mt-2 text-[13px] text-danger">{state.error}</p>}
@@ -62,24 +64,24 @@ export function PdfReader({ onRead, onPick, picked }: { onRead: (r: PdfReadResul
             {r.scanned ? (
               <p className="flex items-start gap-2 rounded-md bg-raised px-3 py-2.5 text-[13px] text-ink-2">
                 <ScanLine className="mt-0.5 size-4 shrink-0" />
-                This file is a scan or photo, so there is no text to read. Type the chassis number from the preview. The file will still be attached to the vehicle.
+                {t('pdf.scanned')}
               </p>
             ) : r.candidates.length === 0 ? (
-              <p className="rounded-md bg-raised px-3 py-2.5 text-[13px] text-ink-2">No chassis number found in this PDF's text. Type it from the preview.</p>
+              <p className="rounded-md bg-raised px-3 py-2.5 text-[13px] text-ink-2">{t('pdf.noneFound')}</p>
             ) : (
               <div>
-                <p className="mb-2 text-[13px] text-ink-2">Found in the document. Choose the correct one and compare it with the preview:</p>
+                <p className="mb-2 text-[13px] text-ink-2">{t('pdf.found')}</p>
                 <ul className="space-y-1.5">
                   {r.candidates.slice(0, 4).map((c) => (
                     <li key={c.value}>
                       <button
                         type="button"
                         onClick={() => onPick(c)}
-                        className={cn('flex w-full cursor-pointer items-center justify-between gap-3 rounded-md border px-3 py-2 text-start', picked === c.value ? 'border-accent bg-accent-soft' : 'border-line hover:bg-raised')}
+                        className={cn('flex w-full cursor-pointer items-center justify-between gap-3 rounded-md border px-3 py-2 text-start', picked === c.value ? 'border-accent bg-accent/10' : 'border-line hover:bg-raised')}
                       >
                         <Chassis value={c.value} className="text-[15px]" />
                         <span className="text-[12px] text-ink-3">
-                          page {c.page}{c.labelAnchored ? ', labelled' : ''}{c.check.warnings.length ? ', check it' : ''}
+                          {t('pdf.page', { n: c.page })}{c.labelAnchored ? t('pdf.labelled') : ''}{c.check.warnings.length ? t('pdf.checkIt') : ''}
                         </span>
                       </button>
                     </li>
@@ -88,7 +90,7 @@ export function PdfReader({ onRead, onPick, picked }: { onRead: (r: PdfReadResul
               </div>
             )}
             {Object.keys(r.fields).length > 0 && (
-              <p className="text-[12.5px] text-ink-3">Other details found in the PDF were filled into empty fields below. Check them before saving.</p>
+              <p className="text-[12.5px] text-ink-3">{t('pdf.otherFields')}</p>
             )}
           </div>
           <DocPreview src={r.file} isPdf={!r.file.type.startsWith('image/')} className="max-h-[28rem]" />

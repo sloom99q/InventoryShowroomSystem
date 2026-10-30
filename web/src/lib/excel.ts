@@ -2,6 +2,7 @@
 import readXlsxFile from 'read-excel-file/browser'
 import writeXlsxFile from 'write-excel-file/browser'
 import { fromZonedTime } from 'date-fns-tz'
+import i18n from '@/i18n'
 import { STATUS_LABEL } from './labels'
 import { TZ, fmtDateTime } from './format'
 import type { VehicleOverview, VehicleStatus } from './types'
@@ -11,23 +12,31 @@ export type ImportField =
   | 'chassis_number' | 'brand' | 'model' | 'year' | 'trim_level' | 'exterior_color' | 'interior_color'
   | 'mileage_km' | 'location' | 'status' | 'arrival_at' | 'sold_at' | 'acquisition_price' | 'sale_price' | 'notes'
 
-export const IMPORT_FIELDS: { key: ImportField; label: string; aliases: string[] }[] = [
-  { key: 'chassis_number', label: 'Chassis number', aliases: ['chassis', 'chassis no', 'chassis number', 'vin', 'frame', 'frame no', 'رقم الشاصي', 'الشاصي', 'رقم الهيكل'] },
-  { key: 'brand', label: 'Brand', aliases: ['brand', 'make', 'manufacturer', 'الماركة', 'الشركة'] },
-  { key: 'model', label: 'Model', aliases: ['model', 'الموديل', 'الطراز'] },
-  { key: 'year', label: 'Year', aliases: ['year', 'model year', 'سنة الصنع', 'السنة'] },
-  { key: 'trim_level', label: 'Trim', aliases: ['trim', 'spec', 'specification', 'variant', 'الفئة'] },
-  { key: 'exterior_color', label: 'Exterior colour', aliases: ['color', 'colour', 'exterior', 'exterior color', 'exterior colour', 'اللون'] },
-  { key: 'interior_color', label: 'Interior colour', aliases: ['interior', 'interior color', 'interior colour'] },
-  { key: 'mileage_km', label: 'Mileage (km)', aliases: ['mileage', 'km', 'odometer', 'kilometers', 'kilometres', 'الممشى'] },
-  { key: 'location', label: 'Location', aliases: ['location', 'yard', 'الموقع'] },
-  { key: 'status', label: 'Status', aliases: ['status', 'الحالة'] },
-  { key: 'arrival_at', label: 'Arrival date', aliases: ['arrival', 'arrival date', 'arrived', 'date in', 'received', 'تاريخ الوصول'] },
-  { key: 'sold_at', label: 'Sale date', aliases: ['sold', 'sale date', 'sold date', 'date sold', 'تاريخ البيع'] },
-  { key: 'acquisition_price', label: 'Purchase price', aliases: ['cost', 'purchase price', 'buy price', 'acquisition', 'سعر الشراء'] },
-  { key: 'sale_price', label: 'Sale price', aliases: ['sale price', 'sold price', 'selling price', 'سعر البيع'] },
-  { key: 'notes', label: 'Notes', aliases: ['notes', 'remarks', 'comments', 'ملاحظات'] },
+const FIELD_ALIASES: { key: ImportField; aliases: string[] }[] = [
+  { key: 'chassis_number', aliases: ['chassis', 'chassis no', 'chassis number', 'vin', 'frame', 'frame no', 'رقم الشاصي', 'الشاصي', 'رقم الهيكل'] },
+  { key: 'brand', aliases: ['brand', 'make', 'manufacturer', 'الماركة', 'الشركة'] },
+  { key: 'model', aliases: ['model', 'الموديل', 'الطراز'] },
+  { key: 'year', aliases: ['year', 'model year', 'سنة الصنع', 'السنة'] },
+  { key: 'trim_level', aliases: ['trim', 'spec', 'specification', 'variant', 'الفئة'] },
+  { key: 'exterior_color', aliases: ['color', 'colour', 'exterior', 'exterior color', 'exterior colour', 'اللون'] },
+  { key: 'interior_color', aliases: ['interior', 'interior color', 'interior colour'] },
+  { key: 'mileage_km', aliases: ['mileage', 'km', 'odometer', 'kilometers', 'kilometres', 'الممشى'] },
+  { key: 'location', aliases: ['location', 'yard', 'الموقع'] },
+  { key: 'status', aliases: ['status', 'الحالة'] },
+  { key: 'arrival_at', aliases: ['arrival', 'arrival date', 'arrived', 'date in', 'received', 'تاريخ الوصول'] },
+  { key: 'sold_at', aliases: ['sold', 'sale date', 'sold date', 'date sold', 'تاريخ البيع'] },
+  { key: 'acquisition_price', aliases: ['cost', 'purchase price', 'buy price', 'acquisition', 'سعر الشراء'] },
+  { key: 'sale_price', aliases: ['sale price', 'sold price', 'selling price', 'سعر البيع'] },
+  { key: 'notes', aliases: ['notes', 'remarks', 'comments', 'ملاحظات'] },
 ]
+
+/** Import fields with their label in the current language. */
+export const IMPORT_FIELDS: { key: ImportField; readonly label: string; aliases: string[] }[] = FIELD_ALIASES.map((f) => ({
+  ...f,
+  get label() {
+    return i18n.t(`importer:fields.${f.key}`)
+  },
+}))
 
 export type Sheet = { headers: string[]; rows: unknown[][] }
 
@@ -60,6 +69,11 @@ const STATUS_WORDS: Record<string, VehicleStatus> = {
   garage: 'in_garage', 'in garage': 'in_garage', repair: 'in_garage', workshop: 'in_garage',
   reserved: 'reserved', booked: 'reserved', hold: 'reserved',
   sold: 'sold', delivered: 'delivered',
+  'متوفرة': 'in_stock', 'متوفر': 'in_stock', 'في المعرض': 'in_stock',
+  'في الكراج': 'in_garage', 'كراج': 'in_garage', 'تصليح': 'in_garage',
+  'محجوزة': 'reserved', 'محجوز': 'reserved',
+  'مباعة': 'sold', 'مباع': 'sold', 'مبيوعة': 'sold',
+  'تم التسليم': 'delivered', 'مسلمة': 'delivered', 'مسلّمة': 'delivered',
 }
 
 function toDate(v: unknown): string | null | 'invalid' {
@@ -104,13 +118,13 @@ export function buildRows(sheet: Sheet, mapping: Record<ImportField, number | nu
     }
     const values: ImportRow['values'] = {}
     const chassis = text('chassis_number')
-    if (!chassis) errors.push('Missing chassis number')
+    if (!chassis) errors.push(i18n.t('importer:check.missingChassis'))
     else {
       const c = checkChassis(chassis)
       errors.push(...c.errors)
-      if (c.suggestion) warnings.push(`Contains I/O/Q; did you mean ${c.suggestion}?`)
-      if (c.kind === 'nonstandard') warnings.push('Not a 17-character VIN')
-      if (seen.has(c.normalized)) errors.push(`Same chassis as row ${seen.get(c.normalized)}`)
+      if (c.suggestion) warnings.push(i18n.t('importer:check.didYouMean', { value: c.suggestion }))
+      if (c.kind === 'nonstandard') warnings.push(i18n.t('importer:check.notVin17'))
+      if (seen.has(c.normalized)) errors.push(i18n.t('importer:check.sameAsRow', { line: seen.get(c.normalized) }))
       else seen.set(c.normalized, line)
       values.chassis_number = chassis
     }
@@ -119,35 +133,35 @@ export function buildRows(sheet: Sheet, mapping: Record<ImportField, number | nu
     if (year !== null) {
       const y = Number(year instanceof Date ? year.getFullYear() : year)
       if (Number.isInteger(y) && y >= 1900 && y <= 2100) values.year = y
-      else warnings.push(`Year “${year}” ignored`)
+      else warnings.push(i18n.t('importer:check.yearIgnored', { value: String(year) }))
     }
     const km = get('mileage_km')
     if (km !== null) {
       const n = Number(String(km).replace(/[,\s]|km/gi, ''))
       if (Number.isFinite(n) && n >= 0) values.mileage_km = Math.round(n)
-      else warnings.push(`Mileage “${km}” ignored`)
+      else warnings.push(i18n.t('importer:check.mileageIgnored', { value: String(km) }))
     }
     for (const k of ['acquisition_price', 'sale_price'] as const) {
       const v = get(k)
       if (v === null) continue
       const n = String(v).replace(/[,\s]|AED/gi, '')
       if (/^\d+(\.\d{1,2})?$/.test(n)) values[k] = Number(n).toFixed(2)
-      else warnings.push(`${k === 'sale_price' ? 'Sale' : 'Purchase'} price “${v}” ignored`)
+      else warnings.push(i18n.t(k === 'sale_price' ? 'importer:check.salePriceIgnored' : 'importer:check.purchasePriceIgnored', { value: String(v) }))
     }
     for (const k of ['arrival_at', 'sold_at'] as const) {
       const d = toDate(get(k))
-      if (d === 'invalid') warnings.push(`Date “${get(k)}” not understood; use day/month/year`)
+      if (d === 'invalid') warnings.push(i18n.t('importer:check.dateNotUnderstood', { value: String(get(k)) }))
       else values[k] = d
     }
     const st = text('status')
     if (st) {
       const s = STATUS_WORDS[st.toLowerCase()]
       if (s) values.status = s
-      else warnings.push(`Status “${st}” not recognised; set to In stock`)
+      else warnings.push(i18n.t('importer:check.statusUnknown', { value: st }))
     }
     if (!values.status && values.sold_at) values.status = 'sold'
     if ((values.status === 'sold' || values.status === 'delivered') && !values.sold_at) {
-      warnings.push('Marked sold without a sale date; imported as In stock')
+      warnings.push(i18n.t('importer:check.soldWithoutDate'))
       values.status = 'in_stock'
     }
     return { line, values, errors, warnings }
@@ -155,9 +169,10 @@ export function buildRows(sheet: Sheet, mapping: Record<ImportField, number | nu
 }
 
 export async function exportVehicles(rows: VehicleOverview[], currency: string) {
-  const header = ['Chassis number', 'Brand', 'Model', 'Year', 'Trim', 'Exterior colour', 'Interior colour', 'Mileage (km)',
-    'Location', 'Status', 'Arrival (UAE time)', 'Sold (UAE time)', 'Delivered (UAE time)', `Expenses (${currency})`,
-    'Missing accessories', `Purchase price (${currency})`, `Sale price (${currency})`, 'Chassis verified', 'Notes']
+  const h = (key: string, opts?: Record<string, string>) => String(i18n.t(`importer:export.${key}` as never, opts as never))
+  const header = [h('chassis'), h('brand'), h('model'), h('year'), h('trim'), h('exteriorColor'), h('interiorColor'), h('mileage'),
+    h('location'), h('status'), h('arrival'), h('sold'), h('delivered'), h('expenses', { currency }),
+    h('missingAccessories'), h('purchasePrice', { currency }), h('salePrice', { currency }), h('chassisVerified'), h('notes')]
   const cell = (value: string | number | null | undefined, type?: typeof Number) =>
     value === null || value === undefined || value === '' ? null : type ? { type, value: Number(value) } : { type: String, value: String(value) }
   const data = [
@@ -167,9 +182,9 @@ export async function exportVehicles(rows: VehicleOverview[], currency: string) 
       cell(v.interior_color), cell(v.mileage_km, Number), cell(v.location), cell(STATUS_LABEL[v.status!]),
       cell(v.arrival_at ? fmtDateTime(v.arrival_at) : null), cell(v.sold_at ? fmtDateTime(v.sold_at) : null),
       cell(v.delivered_at ? fmtDateTime(v.delivered_at) : null), cell(v.expense_total, Number), cell(v.missing_accessories, Number),
-      cell(v.acquisition_price, Number), cell(v.sale_price, Number), cell(v.chassis_verified ? 'Yes' : 'No'), cell(v.notes),
+      cell(v.acquisition_price, Number), cell(v.sale_price, Number), cell(v.chassis_verified ? h('yes') : h('no')), cell(v.notes),
     ]),
   ]
-  await writeXlsxFile(data as never, { columns: header.map((_, i) => ({ width: i === 0 ? 24 : 16 })), stickyRowsCount: 1 })
-    .toFile(`vehicles-${new Date().toISOString().slice(0, 10)}.xlsx`)
+  await writeXlsxFile(data as never, { columns: header.map((_, i) => ({ width: i === 0 ? 24 : 16 })), stickyRowsCount: 1, rightToLeft: i18n.dir() === 'rtl' })
+    .toFile(`${h('fileName')}-${new Date().toISOString().slice(0, 10)}.xlsx`)
 }

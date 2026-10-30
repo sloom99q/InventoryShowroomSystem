@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Download, LayoutGrid, List, PackageX, Plus, SearchX } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useVehicles, type VehicleFilters } from '@/api/vehicles'
@@ -10,7 +11,6 @@ import { Empty, ErrorNote, PageLoader, Panel, Spinner } from '@/components/ui/mi
 import { Chassis, StatusBadge, VehicleThumb, vehicleTitle } from '@/components/vehicle-bits'
 import { useCompany } from '@/lib/auth'
 import { cn } from '@/lib/cn'
-
 import { fmtDate, fmtMoney, fromLocalInput } from '@/lib/format'
 import { STATUS_LABEL, STATUS_ORDER } from '@/lib/labels'
 import { supabase } from '@/lib/supabase'
@@ -20,6 +20,7 @@ type Column = { id: string; header: ReactNode; sort?: string; align?: 'end'; cel
 const PAGE_SIZE = 25
 
 export function Vehicles() {
+  const { t } = useTranslation(['pages', 'common'])
   const { company, canWrite } = useCompany()
   const [params, setParams] = useSearchParams()
   const nav = useNavigate()
@@ -51,9 +52,9 @@ export function Vehicles() {
   const q = useVehicles(filters)
 
   const columns: Column[] = [
-    { id: 'thumb', header: <span className="sr-only">Photo</span>, cell: (v) => <VehicleThumb path={v.cover_thumbnail_path} className="h-10 w-14" /> },
+    { id: 'thumb', header: <span className="sr-only">{t('common:terms.photo')}</span>, cell: (v) => <VehicleThumb path={v.cover_thumbnail_path} className="h-10 w-14" /> },
     {
-      id: 'vehicle', header: 'Vehicle', sort: 'brand',
+      id: 'vehicle', header: t('vehicles.col.vehicle'), sort: 'brand',
       cell: (v) => (
         <Link to={`/vehicles/${v.id}`} onClick={(e) => e.stopPropagation()} className="block min-w-36 hover:underline">
           <p className="font-medium">{vehicleTitle(v)}</p>
@@ -62,27 +63,27 @@ export function Vehicles() {
       ),
     },
     {
-      id: 'chassis', header: 'Chassis number', sort: 'chassis_normalized',
+      id: 'chassis', header: t('common:terms.chassis'), sort: 'chassis_normalized',
       cell: (v) => (
         <span className="inline-flex items-center gap-2">
           <Chassis value={v.chassis_number!} highlight={filters.q || undefined} className="text-[13px]" />
-          {!v.chassis_verified && <span className="size-1.5 rounded-full bg-warn" title="Chassis not yet verified against documents" />}
+          {!v.chassis_verified && <span className="size-1.5 rounded-full bg-warn" title={t('vehicles.notVerified')} />}
         </span>
       ),
     },
-    { id: 'arrival', header: 'Arrived', sort: 'arrival_at', cell: (v) => <span className="tnum text-ink-2">{fmtDate(v.arrival_at)}</span> },
-    { id: 'status', header: 'Status', sort: 'status', cell: (v) => <StatusBadge status={v.status!} /> },
+    { id: 'arrival', header: t('vehicles.col.arrived'), sort: 'arrival_at', cell: (v) => <span className="tnum text-ink-2">{fmtDate(v.arrival_at)}</span> },
+    { id: 'status', header: t('vehicles.col.status'), sort: 'status', cell: (v) => <StatusBadge status={v.status!} /> },
     {
-      id: 'expenses', header: 'Expenses', sort: 'expense_total', align: 'end',
+      id: 'expenses', header: t('vehicles.col.expenses'), sort: 'expense_total', align: 'end',
       cell: (v) => <span className={cn('tnum', Number(v.expense_total) ? '' : 'text-ink-3')}>{fmtMoney(v.expense_total, company.currency, true)}</span>,
     },
     {
-      id: 'accessories', header: 'Accessories',
+      id: 'accessories', header: t('vehicles.col.accessories'),
       cell: (v) => {
-        if (!v.accessory_count) return <span className="text-ink-3">Not recorded</span>
-        if (v.missing_accessories) return <span className="inline-flex items-center gap-1.5 text-danger"><PackageX className="size-4" aria-hidden />{v.missing_accessories} missing</span>
-        if (v.unknown_accessories) return <span className="text-warn">{v.unknown_accessories} to check</span>
-        return <span className="text-ok">Complete</span>
+        if (!v.accessory_count) return <span className="text-ink-3">{t('vehicles.acc.notRecorded')}</span>
+        if (v.missing_accessories) return <span className="inline-flex items-center gap-1.5 text-danger"><PackageX className="size-4" aria-hidden />{t('vehicles.acc.missing', { count: v.missing_accessories })}</span>
+        if (v.unknown_accessories) return <span className="text-warn">{t('vehicles.acc.toCheck', { count: v.unknown_accessories })}</span>
+        return <span className="text-ok">{t('vehicles.acc.complete')}</span>
       },
     },
   ]
@@ -105,7 +106,7 @@ export function Vehicles() {
       if (error) throw error
       const { exportVehicles } = await import('@/lib/excel')
       await exportVehicles(data as VehicleOverview[], company.currency)
-      toast.success(`Exported ${data.length} vehicles`)
+      toast.success(t('vehicles.exported', { count: data.length }))
     } catch (e) {
       toast.error((e as Error).message)
     } finally {
@@ -121,12 +122,12 @@ export function Vehicles() {
   return (
     <>
       <PageHeader
-        title="Vehicles"
-        description={q.data ? `${count} ${count === 1 ? 'vehicle' : 'vehicles'}${anyFilter ? ' match' : ''}` : undefined}
+        title={t('vehicles.title')}
+        description={q.data ? t(anyFilter ? 'vehicles.match' : 'vehicles.count', { count }) : undefined}
         actions={
           <>
-            <Button onClick={doExport} loading={exporting}><Download /> Export to Excel</Button>
-            {canWrite && <Link to="/vehicles/new" className={buttonVariants({ variant: 'primary' })}><Plus /> Add vehicle</Link>}
+            <Button onClick={doExport} loading={exporting}><Download /> {t('common:actions.exportExcel')}</Button>
+            {canWrite && <Link to="/vehicles/new" className={buttonVariants({ variant: 'primary' })}><Plus /> {t('common:actions.addVehicle')}</Link>}
           </>
         }
       />
@@ -136,42 +137,43 @@ export function Vehicles() {
           defaultValue={filters.q}
           key={filters.q === '' ? 'empty' : 'q'}
           onChange={(e) => set({ q: e.target.value })}
-          placeholder="Filter by chassis, brand or model"
+          placeholder={t('vehicles.filter.placeholder')}
           className="w-full sm:w-72"
-          aria-label="Filter vehicles"
+          aria-label={t('vehicles.filter.label')}
           spellCheck={false}
+          dir="ltr"
         />
-        <Select value={filters.status} onChange={(e) => set({ status: e.target.value === 'all' ? null : e.target.value })} className="w-auto" aria-label="Status">
-          <option value="all">All statuses</option>
-          <option value="available">Available (stock + reserved)</option>
-          <option value="closed">Sold or delivered</option>
+        <Select value={filters.status} onChange={(e) => set({ status: e.target.value === 'all' ? null : e.target.value })} className="w-auto" aria-label={t('vehicles.col.status')}>
+          <option value="all">{t('vehicles.filter.allStatuses')}</option>
+          <option value="available">{t('vehicles.filter.available')}</option>
+          <option value="closed">{t('vehicles.filter.closed')}</option>
           {STATUS_ORDER.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
         </Select>
         <label className="flex items-center gap-2 text-[13px] text-ink-2">
-          Arrived
-          <Input type="date" value={params.get('from') ?? ''} onChange={(e) => set({ from: e.target.value })} className="w-auto" aria-label="Arrived from" />
-          to
-          <Input type="date" value={params.get('to') ?? ''} onChange={(e) => set({ to: e.target.value })} className="w-auto" aria-label="Arrived to" />
+          {t('vehicles.filter.arrived')}
+          <Input type="date" dir="ltr" value={params.get('from') ?? ''} onChange={(e) => set({ from: e.target.value })} className="w-auto" aria-label={t('vehicles.filter.from')} />
+          {t('vehicles.filter.to')}
+          <Input type="date" dir="ltr" value={params.get('to') ?? ''} onChange={(e) => set({ to: e.target.value })} className="w-auto" aria-label={t('vehicles.filter.toLabel')} />
         </label>
         <label className="flex cursor-pointer items-center gap-2 px-1 text-[13px] text-ink-2">
-          <input type="checkbox" checked={filters.archived} onChange={(e) => set({ archived: e.target.checked ? '1' : null })} className="accent-[#cdb07a]" />
-          Archived
+          <input type="checkbox" checked={filters.archived} onChange={(e) => set({ archived: e.target.checked ? '1' : null })} />
+          {t('vehicles.filter.archived')}
         </label>
         {filters.unverified && (
-          <button onClick={() => set({ unverified: null })} className="rounded-full bg-warn/10 px-3 py-1 text-[12.5px] text-warn hover:bg-warn/20">Unverified chassis only ✕</button>
+          <button onClick={() => set({ unverified: null })} className="rounded-full bg-warn/10 px-3 py-1 text-[12.5px] text-warn hover:bg-warn/20">{t('vehicles.filter.unverifiedOnly')}</button>
         )}
-        {anyFilter && <Button variant="ghost" size="sm" onClick={() => setParams({}, { replace: true })}>Clear filters</Button>}
-        <div className="ms-auto flex rounded-md border border-line p-0.5" role="group" aria-label="View">
-          <Button variant="ghost" size="icon-sm" aria-pressed={view === 'list'} className={cn(view === 'list' && 'bg-raised text-ink')} onClick={() => switchView('list')} aria-label="Table view"><List /></Button>
-          <Button variant="ghost" size="icon-sm" aria-pressed={view === 'grid'} className={cn(view === 'grid' && 'bg-raised text-ink')} onClick={() => switchView('grid')} aria-label="Grid view"><LayoutGrid /></Button>
+        {anyFilter && <Button variant="ghost" size="sm" onClick={() => setParams({}, { replace: true })}>{t('common:actions.clearFilters')}</Button>}
+        <div className="ms-auto flex rounded-md border border-line p-0.5" role="group" aria-label={t('vehicles.view')}>
+          <Button variant="ghost" size="icon-sm" aria-pressed={view === 'list'} className={cn(view === 'list' && 'bg-raised text-ink')} onClick={() => switchView('list')} aria-label={t('vehicles.tableView')}><List /></Button>
+          <Button variant="ghost" size="icon-sm" aria-pressed={view === 'grid'} className={cn(view === 'grid' && 'bg-raised text-ink')} onClick={() => switchView('grid')} aria-label={t('vehicles.gridView')}><LayoutGrid /></Button>
         </div>
       </div>
 
       {q.isLoading ? <PageLoader /> : q.error ? <ErrorNote error={q.error} /> : count === 0 ? (
         <Panel>
-          <Empty icon={<SearchX />} title={anyFilter ? 'No vehicles match these filters' : 'No vehicles yet'}
-            action={anyFilter ? <Button onClick={() => setParams({}, { replace: true })}>Clear filters</Button> : canWrite && <Link to="/vehicles/new" className={buttonVariants({ variant: 'primary' })}><Plus /> Add vehicle</Link>}>
-            {filters.q ? `Nothing found for “${filters.q}”. Check the characters, or search only the last 6 digits.` : undefined}
+          <Empty icon={<SearchX />} title={anyFilter ? t('vehicles.noMatchTitle') : t('vehicles.emptyTitle')}
+            action={anyFilter ? <Button onClick={() => setParams({}, { replace: true })}>{t('common:actions.clearFilters')}</Button> : canWrite && <Link to="/vehicles/new" className={buttonVariants({ variant: 'primary' })}><Plus /> {t('common:actions.addVehicle')}</Link>}>
+            {filters.q ? t('vehicles.nothingFound', { q: filters.q }) : undefined}
           </Empty>
         </Panel>
       ) : view === 'list' ? (
@@ -185,7 +187,7 @@ export function Vehicles() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[14px] font-medium">{vehicleTitle(v)}</p>
                     <Chassis value={v.chassis_number!} className="block truncate text-[12.5px] text-ink-2" />
-                    {v.missing_accessories ? <p className="text-[12px] text-danger">{v.missing_accessories} accessories missing</p> : null}
+                    {v.missing_accessories ? <p className="text-[12px] text-danger">{t('vehicles.acc.missingMobile', { count: v.missing_accessories })}</p> : null}
                   </div>
                   <StatusBadge status={v.status!} />
                 </Link>
@@ -237,7 +239,7 @@ export function Vehicles() {
                 </div>
                 <Chassis value={v.chassis_number!} className="mt-1 block text-[12.5px] text-ink-2" />
                 <div className="mt-3 flex justify-between text-[12.5px] text-ink-3">
-                  <span>Arrived {fmtDate(v.arrival_at)}</span>
+                  <span>{t('vehicles.arrivedOn', { date: fmtDate(v.arrival_at) })}</span>
                   <span className="tnum">{fmtMoney(v.expense_total, company.currency, true)}</span>
                 </div>
               </div>
@@ -249,9 +251,9 @@ export function Vehicles() {
       {count > PAGE_SIZE && (
         <div className="mt-4 flex items-center justify-end gap-3 text-[13px] text-ink-2">
           {q.isFetching && <Spinner className="size-4" />}
-          <span className="tnum">Page {filters.page + 1} of {pages}</span>
-          <Button size="icon-sm" disabled={filters.page === 0} onClick={() => set({ page: String(filters.page - 1) })} aria-label="Previous page"><ChevronLeft /></Button>
-          <Button size="icon-sm" disabled={filters.page + 1 >= pages} onClick={() => set({ page: String(filters.page + 1) })} aria-label="Next page"><ChevronRight /></Button>
+          <span className="tnum">{t('common:terms.page', { page: filters.page + 1, pages })}</span>
+          <Button size="icon-sm" disabled={filters.page === 0} onClick={() => set({ page: String(filters.page - 1) })} aria-label={t('vehicles.prevPage')}><ChevronLeft className="flip-rtl" /></Button>
+          <Button size="icon-sm" disabled={filters.page + 1 >= pages} onClick={() => set({ page: String(filters.page + 1) })} aria-label={t('vehicles.nextPage')}><ChevronRight className="flip-rtl" /></Button>
         </div>
       )}
     </>
