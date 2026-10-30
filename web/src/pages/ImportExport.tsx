@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, CheckCircle2, Download, FileSpreadsheet, Upload } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/AppShell'
 import { Button } from '@/components/ui/button'
@@ -41,6 +41,14 @@ export default function ImportExport() {
       toast.error(t('toast.readFailed', { name: f.name, error: (e as Error).message }))
     } finally { setBusy(null) }
   }
+  // A spreadsheet dropped into the document import that turned out to be an inventory list.
+  const routed = (useLocation().state as { file?: File } | null)?.file
+  const [routedLoaded, setRoutedLoaded] = useState(false)
+  if (routed && !routedLoaded) {
+    setRoutedLoaded(true)
+    queueMicrotask(() => load(routed))
+  }
+
 
   const rows = useMemo(() => {
     if (!sheet || !mapping) return []

@@ -1,6 +1,7 @@
 // Vehicle profile: header, tabs and their dialogs.
 export default {
   header: {
+    importFiles: 'Import files',
     archivedBanner: 'Archived on {{date}}. It stays searchable but is hidden from the main list.',
     chassisLabel: 'Chassis number',
     chassisChecked: 'Checked against documents',
@@ -26,6 +27,7 @@ export default {
     notFound: 'Vehicle not found',
   },
   tabs: {
+    specs: 'Specifications',
     overview: 'Overview',
     documents: 'Documents',
     photos: 'Photos',
@@ -35,6 +37,7 @@ export default {
     activity: 'Change history',
   },
   overview: {
+    listingPrice: 'Asking price',
     brand: 'Brand',
     model: 'Model',
     year: 'Year',

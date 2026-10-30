@@ -2,13 +2,13 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useCreateVehicle } from '@/api/vehicles'
 import { ChassisInput, useChassisBlocked } from '@/components/ChassisInput'
 import { PdfReader, type PdfReadResult } from '@/components/PdfReader'
 import { PhotoPicker } from '@/components/PhotoPicker'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Field, Input, Select } from '@/components/ui/form'
 import { Panel } from '@/components/ui/misc'
 import { fromForm, VehicleFields, vehicleSchema, type VehicleForm } from '@/components/VehicleFields'
@@ -38,7 +38,7 @@ function Section({ n, title, hint, children }: { n: number; title: string; hint?
 }
 
 export function VehicleNew() {
-  const { t } = useTranslation(['add', 'common'])
+  const { t } = useTranslation(['add', 'common', 'docimport'])
   const { company } = useCompany()
   const nav = useNavigate()
   const create = useCreateVehicle()
@@ -126,9 +126,12 @@ export function VehicleNew() {
 
   return (
     <form onSubmit={form.handleSubmit(save)} className="mx-auto max-w-4xl space-y-4 pb-24">
-      <div className="mb-2">
-        <h1 className="text-[22px] font-semibold">{t('title')}</h1>
-        <p className="mt-1 text-[13.5px] text-ink-2">{t('intro')}</p>
+      <div className="mb-2 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-[22px] font-semibold">{t('title')}</h1>
+          <p className="mt-1 text-[13.5px] text-ink-2">{t('intro')}</p>
+        </div>
+        <Link to="/vehicles/import" className={buttonVariants()}>{t('docimport:fromFiles')}</Link>
       </div>
 
       <Section n={1} title={t('sections.chassis')} hint={t('sections.chassisHint')}>

@@ -15,7 +15,7 @@ import { friendlyError, supabase } from '@/lib/supabase'
 import { applyBranding, chromeIsDark, contrast, inkOn, PRESETS } from '@/lib/theme'
 import type { Company } from '@/lib/types'
 
-type Draft = Pick<Company, 'name' | 'accent_color' | 'sidebar_color' | 'theme_mode' | 'logo_path' | 'logo_dark_path' | 'default_locale'>
+type Draft = Pick<Company, 'name' | 'accent_color' | 'sidebar_color' | 'theme_mode' | 'logo_path' | 'logo_dark_path' | 'default_locale' | 'known_brands'>
 
 function ColorField({ label, hint, value, onChange, warning }: { label: string; hint?: string; value: string; onChange: (v: string) => void; warning?: string }) {
   const [text, setText] = useState(value)
@@ -74,12 +74,14 @@ function LogoField({ label, hint, path, companyId, onChange, dark }: { label: st
 }
 
 export default function Settings() {
-  const { t } = useTranslation(['settings', 'common'])
+  const { t } = useTranslation(['settings', 'common', 'docimport'])
   const { company } = useCompany()
+  const [brand, setBrand] = useState('')
   const qc = useQueryClient()
   const initial: Draft = {
     name: company.name, accent_color: company.accent_color, sidebar_color: company.sidebar_color, theme_mode: company.theme_mode,
     logo_path: company.logo_path, logo_dark_path: company.logo_dark_path, default_locale: company.default_locale,
+    known_brands: company.known_brands ?? [],
   }
   const [d, setD] = useState<Draft>(initial)
   const set = (p: Partial<Draft>) => setD((x) => ({ ...x, ...p }))
@@ -125,6 +127,31 @@ export default function Settings() {
               </Field>
               <div className="text-[13.5px]"><p className="text-ink-3">{t('currency')}</p><p>{company.currency}</p></div>
               <div className="text-[13.5px]"><p className="text-ink-3">{t('timezone')}</p><p>{t('timezoneValue', { tz: company.timezone })}</p></div>
+            </div>
+          </Panel>
+
+          <Panel>
+            <PanelHeader title={t('docimport:brands.title')} />
+            <div className="space-y-3 p-5">
+              <p className="text-[13px] text-ink-2">{t('docimport:brands.hint')}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {d.known_brands.map((b) => (
+                  <span key={b} className="flex items-center gap-1 rounded-sm border border-line bg-raised ps-2 text-[13px]" dir="auto">
+                    {b}
+                    <button className="flex size-6 cursor-pointer items-center justify-center text-ink-3 hover:text-danger" aria-label={t('docimport:brands.remove', { name: b })}
+                      onClick={() => set({ known_brands: d.known_brands.filter((x) => x !== b) })}><Trash2 className="size-3.5" /></button>
+                  </span>
+                ))}
+              </div>
+              <form className="flex gap-2" onSubmit={(e) => {
+                e.preventDefault()
+                const b = brand.trim()
+                if (b && !d.known_brands.some((x) => x.toLowerCase() === b.toLowerCase())) set({ known_brands: [...d.known_brands, b] })
+                setBrand('')
+              }}>
+                <Input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder={t('docimport:brands.placeholder')} className="max-w-xs" dir="auto" aria-label={t('docimport:brands.placeholder')} />
+                <Button type="submit" disabled={!brand.trim()}>{t('docimport:brands.add')}</Button>
+              </form>
             </div>
           </Panel>
 

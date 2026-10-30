@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Archive, ArchiveRestore, ArrowLeftRight, BadgeCheck, Pencil, ShieldAlert } from 'lucide-react'
+import { Archive, ArchiveRestore, ArrowLeftRight, BadgeCheck, Pencil, ShieldAlert, Upload } from 'lucide-react'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 import { useAccessories, useDocuments, useExpenses, useImages } from '@/api/records'
 import { useArchiveVehicle, useChangeStatus, useUpdateVehicle, useVehicle } from '@/api/vehicles'
 import { ChassisInput, useChassisBlocked } from '@/components/ChassisInput'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { ConfirmDialog, Dialog } from '@/components/ui/dialog'
 import { Field, Input, Textarea } from '@/components/ui/form'
 import { ErrorNote, PageLoader, Panel, Tabs } from '@/components/ui/misc'
@@ -23,9 +23,10 @@ import { AccessoriesTab } from './vehicle/AccessoriesTab'
 import { ActivityTab, TimelineTab } from './vehicle/HistoryTabs'
 import { DocumentsTab } from './vehicle/DocumentsTab'
 import { ExpensesTab } from './vehicle/ExpensesTab'
+import { SpecsTab } from './vehicle/SpecsTab'
 import { PhotosTab } from './vehicle/PhotosTab'
 
-type Tab = 'overview' | 'documents' | 'photos' | 'accessories' | 'expenses' | 'timeline' | 'activity'
+type Tab = 'overview' | 'specs' | 'documents' | 'photos' | 'accessories' | 'expenses' | 'timeline' | 'activity'
 
 export function VehicleDetail() {
   const { t } = useTranslation(['vehicle', 'common'])
@@ -47,6 +48,7 @@ export function VehicleDetail() {
 
   const tabs: { value: Tab; label: string; count?: number | null }[] = [
     { value: 'overview', label: t('tabs.overview') },
+    { value: 'specs', label: t('tabs.specs') },
     { value: 'documents', label: t('tabs.documents'), count: docs.data?.filter((d) => !d.superseded_at).length },
     { value: 'photos', label: t('tabs.photos'), count: imgs.data?.filter((i) => !i.superseded_at).length },
     { value: 'accessories', label: t('tabs.accessories'), count: acc.data?.length },
@@ -107,6 +109,7 @@ export function VehicleDetail() {
             <div className="flex shrink-0 flex-row flex-wrap gap-2 sm:flex-col">
               <Button variant="primary" onClick={() => setDialog('status')}><ArrowLeftRight className="flip-rtl" /> {t('header.changeStatus')}</Button>
               <Button onClick={() => setDialog('edit')}><Pencil /> {t('header.editDetails')}</Button>
+              <Link to={`/vehicles/${v.id}/import`} className={buttonVariants()}><Upload /> {t('header.importFiles')}</Link>
               {(profile.role === 'admin' || profile.role === 'secretary') && (
                 <>
                   <Button variant="ghost" onClick={() => setDialog('chassis')}>{t('header.correctChassis')}</Button>
@@ -122,6 +125,7 @@ export function VehicleDetail() {
       <div className="mt-5">
         {tab === 'overview' && <Overview v={v} />}
         {tab === 'documents' && <DocumentsTab vehicleId={v.id!} chassis={v.chassis_number!} />}
+        {tab === 'specs' && <SpecsTab vehicleId={v.id!} />}
         {tab === 'photos' && <PhotosTab vehicleId={v.id!} />}
         {tab === 'accessories' && <AccessoriesTab vehicleId={v.id!} />}
         {tab === 'expenses' && <ExpensesTab vehicleId={v.id!} />}
@@ -172,6 +176,7 @@ function Overview({ v }: { v: VehicleOverview }) {
     [t('overview.location'), v.location], [t('overview.status'), STATUS_LABEL[v.status!]], [t('overview.arrived'), fmtDateTime(v.arrival_at)],
     [t('overview.sold'), fmtDateTime(v.sold_at)], [t('overview.delivered'), fmtDateTime(v.delivered_at)],
     [t('overview.purchasePrice'), v.acquisition_price !== null ? fmtMoney(v.acquisition_price) : null],
+    [t('overview.listingPrice'), v.listing_price !== null ? fmtMoney(v.listing_price) : null],
     [t('overview.salePrice'), v.sale_price !== null ? fmtMoney(v.sale_price) : null],
     [t('overview.created'), fmtDateTime(v.created_at)], [t('overview.updated'), fmtDateTime(v.updated_at)],
   ]

@@ -44,6 +44,26 @@ worker/     Python Docling/OCR scanner — parked, not used by the app yet (see 
 | Staff / technician | photos, expenses, accessories, status changes |
 | Read-only | view only |
 
+## Document import (Vehicles → Add from documents, or "Import files" on a vehicle)
+
+Drop every file for one car at once (PDF, DOCX, XLSX/XLS/CSV, photos). Everything is read in the
+browser from the files' text layer — no OCR, no server. `web/src/lib/extract/`:
+
+- `layout.ts` rebuilds lines from text positions and keeps side-by-side English/Arabic columns as
+  separate streams; Arabic is put back in reading order and NFKC-normalised.
+- `structure.ts` finds sections, `Label: value` lines, bullets and table rows → facts with source file/page.
+- `core.ts` maps facts to vehicle fields with a generic English/Arabic **label** dictionary (no brand,
+  model or value lists). A full date is a document date, never the model year. Brand/model split of a
+  document title is only a suggestion (helped by Settings → *Brands you sell*).
+- `index.ts` merges facts across files: equal values combine their sources, different values become a
+  conflict the user must resolve. An Excel file listing many vehicles is routed to bulk import.
+
+The review screen saves nothing until "Save to vehicle"; then originals, chosen pictures, vehicle
+fields and every kept fact (as `vehicle_specs`) are written in one transaction (`save_vehicle_import`)
+and audited. Chassis safety rules still apply: no auto-correction, exact-match only for picking a
+vehicle automatically, and a confirmation when files mention a different chassis.
+Test fixtures for a fictional car live in `web/e2e/fixtures/` (`node e2e/fixtures/generate.mjs`).
+
 ## Branding and languages
 
 - **Per-company branding** (Settings → Branding, admins only): logo, optional logo for dark

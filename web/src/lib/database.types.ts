@@ -65,14 +65,14 @@ isOneToOne: false
                   ]
                 },"companies": {
                   Row: {
-                    "accent_color": string,"created_at": string,"currency": string,"default_locale": string,"id": string,"logo_dark_path": string | null,"logo_path": string | null,"name": string,"sidebar_color": string,"theme_mode": string,"timezone": string
+                    "accent_color": string,"created_at": string,"currency": string,"default_locale": string,"id": string,"known_brands": (string)[],"logo_dark_path": string | null,"logo_path": string | null,"name": string,"sidebar_color": string,"theme_mode": string,"timezone": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "accent_color"?: string,"created_at"?: string,"currency"?: string,"default_locale"?: string,"id"?: string,"logo_dark_path"?: string | null,"logo_path"?: string | null,"name": string,"sidebar_color"?: string,"theme_mode"?: string,"timezone"?: string
+                    "accent_color"?: string,"created_at"?: string,"currency"?: string,"default_locale"?: string,"id"?: string,"known_brands"?: (string)[],"logo_dark_path"?: string | null,"logo_path"?: string | null,"name": string,"sidebar_color"?: string,"theme_mode"?: string,"timezone"?: string
                   }
                   Update: {
-                    "accent_color"?: string,"created_at"?: string,"currency"?: string,"default_locale"?: string,"id"?: string,"logo_dark_path"?: string | null,"logo_path"?: string | null,"name"?: string,"sidebar_color"?: string,"theme_mode"?: string,"timezone"?: string
+                    "accent_color"?: string,"created_at"?: string,"currency"?: string,"default_locale"?: string,"id"?: string,"known_brands"?: (string)[],"logo_dark_path"?: string | null,"logo_path"?: string | null,"name"?: string,"sidebar_color"?: string,"theme_mode"?: string,"timezone"?: string
                   }
                   Relationships: [
                     
@@ -227,16 +227,48 @@ isOneToOne: false
       referencedColumns: ["id","company_id"]
     }
                   ]
-                },"vehicles": {
+                },"vehicle_specs": {
                   Row: {
-                    "acquisition_price": number | null,"archived_at": string | null,"arrival_at": string | null,"brand": string | null,"chassis_normalized": string | null,"chassis_number": string,"chassis_verified": boolean,"company_id": string,"created_at": string,"created_by": string | null,"delivered_at": string | null,"exterior_color": string | null,"id": string,"interior_color": string | null,"location": string | null,"mileage_km": number | null,"model": string | null,"notes": string | null,"sale_price": number | null,"sold_at": string | null,"status": Database["public"]['Enums']["vehicle_status"],"trim_level": string | null,"updated_at": string,"year": number | null
+                    "company_id": string,"created_at": string,"id": string,"label": string,"label_alt": string | null,"section": string | null,"sort_order": number,"source_document_id": string | null,"source_page": number | null,"unit": string | null,"updated_at": string,"value": string,"vehicle_id": string,"verified": boolean
                   }
                   ComputedFields: never
                   Insert: {
-                    "acquisition_price"?: number | null,"archived_at"?: string | null,"arrival_at"?: string | null,"brand"?: string | null,"chassis_normalized"?: never,"chassis_number": string,"chassis_verified"?: boolean,"company_id"?: string,"created_at"?: string,"created_by"?: string | null,"delivered_at"?: string | null,"exterior_color"?: string | null,"id"?: string,"interior_color"?: string | null,"location"?: string | null,"mileage_km"?: number | null,"model"?: string | null,"notes"?: string | null,"sale_price"?: number | null,"sold_at"?: string | null,"status"?: Database["public"]['Enums']["vehicle_status"],"trim_level"?: string | null,"updated_at"?: string,"year"?: number | null
+                    "company_id"?: string,"created_at"?: string,"id"?: string,"label": string,"label_alt"?: string | null,"section"?: string | null,"sort_order"?: number,"source_document_id"?: string | null,"source_page"?: number | null,"unit"?: string | null,"updated_at"?: string,"value": string,"vehicle_id": string,"verified"?: boolean
                   }
                   Update: {
-                    "acquisition_price"?: number | null,"archived_at"?: string | null,"arrival_at"?: string | null,"brand"?: string | null,"chassis_normalized"?: never,"chassis_number"?: string,"chassis_verified"?: boolean,"company_id"?: string,"created_at"?: string,"created_by"?: string | null,"delivered_at"?: string | null,"exterior_color"?: string | null,"id"?: string,"interior_color"?: string | null,"location"?: string | null,"mileage_km"?: number | null,"model"?: string | null,"notes"?: string | null,"sale_price"?: number | null,"sold_at"?: string | null,"status"?: Database["public"]['Enums']["vehicle_status"],"trim_level"?: string | null,"updated_at"?: string,"year"?: number | null
+                    "company_id"?: string,"created_at"?: string,"id"?: string,"label"?: string,"label_alt"?: string | null,"section"?: string | null,"sort_order"?: number,"source_document_id"?: string | null,"source_page"?: number | null,"unit"?: string | null,"updated_at"?: string,"value"?: string,"vehicle_id"?: string,"verified"?: boolean
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "vehicle_specs_source_document_id_fkey"
+      columns: ["source_document_id"]
+isOneToOne: false
+      referencedRelation: "documents"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "vehicle_specs_vehicle_id_company_id_fkey"
+      columns: ["vehicle_id","company_id"]
+isOneToOne: false
+      referencedRelation: "vehicle_overview"
+      referencedColumns: ["id","company_id"]
+    },{
+      foreignKeyName: "vehicle_specs_vehicle_id_company_id_fkey"
+      columns: ["vehicle_id","company_id"]
+isOneToOne: false
+      referencedRelation: "vehicles"
+      referencedColumns: ["id","company_id"]
+    }
+                  ]
+                },"vehicles": {
+                  Row: {
+                    "acquisition_price": number | null,"archived_at": string | null,"arrival_at": string | null,"brand": string | null,"chassis_normalized": string | null,"chassis_number": string,"chassis_verified": boolean,"company_id": string,"created_at": string,"created_by": string | null,"delivered_at": string | null,"exterior_color": string | null,"id": string,"interior_color": string | null,"listing_price": number | null,"location": string | null,"mileage_km": number | null,"model": string | null,"notes": string | null,"sale_price": number | null,"sold_at": string | null,"status": Database["public"]['Enums']["vehicle_status"],"trim_level": string | null,"updated_at": string,"year": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "acquisition_price"?: number | null,"archived_at"?: string | null,"arrival_at"?: string | null,"brand"?: string | null,"chassis_normalized"?: never,"chassis_number": string,"chassis_verified"?: boolean,"company_id"?: string,"created_at"?: string,"created_by"?: string | null,"delivered_at"?: string | null,"exterior_color"?: string | null,"id"?: string,"interior_color"?: string | null,"listing_price"?: number | null,"location"?: string | null,"mileage_km"?: number | null,"model"?: string | null,"notes"?: string | null,"sale_price"?: number | null,"sold_at"?: string | null,"status"?: Database["public"]['Enums']["vehicle_status"],"trim_level"?: string | null,"updated_at"?: string,"year"?: number | null
+                  }
+                  Update: {
+                    "acquisition_price"?: number | null,"archived_at"?: string | null,"arrival_at"?: string | null,"brand"?: string | null,"chassis_normalized"?: never,"chassis_number"?: string,"chassis_verified"?: boolean,"company_id"?: string,"created_at"?: string,"created_by"?: string | null,"delivered_at"?: string | null,"exterior_color"?: string | null,"id"?: string,"interior_color"?: string | null,"listing_price"?: number | null,"location"?: string | null,"mileage_km"?: number | null,"model"?: string | null,"notes"?: string | null,"sale_price"?: number | null,"sold_at"?: string | null,"status"?: Database["public"]['Enums']["vehicle_status"],"trim_level"?: string | null,"updated_at"?: string,"year"?: number | null
                   }
                   Relationships: [
                     {
@@ -252,7 +284,7 @@ isOneToOne: false
           Views: {
             "vehicle_overview": {
                   Row: {
-                    "accessory_count": number | null,"acquisition_price": number | null,"archived_at": string | null,"arrival_at": string | null,"brand": string | null,"chassis_normalized": string | null,"chassis_number": string,"chassis_verified": boolean,"company_id": string,"cover_thumbnail_path": string | null,"created_at": string,"created_by": string | null,"delivered_at": string | null,"document_count": number | null,"expense_total": number | null,"exterior_color": string | null,"id": string,"interior_color": string | null,"location": string | null,"mileage_km": number | null,"missing_accessories": number | null,"model": string | null,"notes": string | null,"sale_price": number | null,"sold_at": string | null,"status": Database["public"]['Enums']["vehicle_status"],"trim_level": string | null,"unknown_accessories": number | null,"updated_at": string,"year": number | null
+                    "accessory_count": number | null,"acquisition_price": number | null,"archived_at": string | null,"arrival_at": string | null,"brand": string | null,"chassis_normalized": string | null,"chassis_number": string,"chassis_verified": boolean,"company_id": string,"cover_thumbnail_path": string | null,"created_at": string,"created_by": string | null,"delivered_at": string | null,"document_count": number | null,"expense_total": number | null,"exterior_color": string | null,"id": string,"interior_color": string | null,"listing_price": number | null,"location": string | null,"mileage_km": number | null,"missing_accessories": number | null,"model": string | null,"notes": string | null,"sale_price": number | null,"sold_at": string | null,"status": Database["public"]['Enums']["vehicle_status"],"trim_level": string | null,"unknown_accessories": number | null,"updated_at": string,"year": number | null
                   }
                   ComputedFields: never
                   Relationships: [
@@ -315,6 +347,7 @@ isOneToOne: false
 "exterior_color": string | null,
 "id": string,
 "interior_color": string | null,
+"listing_price": number | null,
 "location": string | null,
 "mileage_km": number | null,
 "model": string | null,
@@ -349,6 +382,9 @@ isOneToOne: false
                            },
 "normalize_chassis":
 { Args: { "raw": string }; Returns: string
+                           },
+"save_vehicle_import":
+{ Args: { "p_documents"?: Json,"p_fields": Json,"p_images"?: Json,"p_specs"?: Json,"p_vehicle_id": string }; Returns: string
                            },
 "set_information_card":
 { Args: { "p_file_size": number,"p_mime_type": string,"p_original_filename": string,"p_storage_path": string,"p_thumbnail_path"?: string,"p_vehicle_id": string }; Returns: {

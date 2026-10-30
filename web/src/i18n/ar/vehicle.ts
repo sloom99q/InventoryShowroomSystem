@@ -3,6 +3,7 @@ import type en from '../en/vehicle'
 
 const ar: Messages<typeof en> = {
   header: {
+    importFiles: 'استيراد ملفات',
     archivedBanner: 'تمت الأرشفة في {{date}}. تبقى قابلة للبحث لكنها مخفية من القائمة الرئيسية.',
     chassisLabel: 'رقم الشاصي (VIN)',
     chassisChecked: 'تمت مطابقته مع المستندات',
@@ -28,6 +29,7 @@ const ar: Messages<typeof en> = {
     notFound: 'السيارة غير موجودة',
   },
   tabs: {
+    specs: 'المواصفات',
     overview: 'نظرة عامة',
     documents: 'المستندات',
     photos: 'الصور',
@@ -37,6 +39,7 @@ const ar: Messages<typeof en> = {
     activity: 'سجل التعديلات',
   },
   overview: {
+    listingPrice: 'السعر المعروض',
     brand: 'الماركة',
     model: 'الموديل',
     year: 'سنة الصنع',
