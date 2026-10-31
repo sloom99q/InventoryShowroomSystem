@@ -140,6 +140,18 @@ cd web && npx playwright test    # end-to-end: add → document check → expens
                                  # (needs a bootstrapped admin)
 ```
 
+## Backups (local instance)
+
+```sh
+scripts/backup.sh                       # → ~/ShowroomBackups/<date_time>/ (sync that folder to Google Drive)
+scripts/restore.sh ~/ShowroomBackups/<date_time>   # asks to type "restore"; --yes skips the prompt
+```
+Each backup folder holds `database.sql.gz` (all app data, logins and file records), `storage/` (every
+uploaded file), `migrations.txt`, `manifest.txt` (row and file counts) and `SHA256SUMS`. Restore checks
+the checksums and migrations first, replaces the data in one transaction, copies the files back and
+verifies the counts against the manifest. `SUPABASE_WORKDIR=<project>` targets another local project.
+Tested by restoring into a fresh second local instance: same login, same records, byte-identical files.
+
 ## Deploying (private web app)
 
 1. Create a Supabase project (region: closest to UAE, e.g. `ap-south-1` Mumbai / `eu-central-1`).
