@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # The PILOT instance: the showroom's real data, separate from development.
 #
-#   scripts/pilot.sh start    start Docker (colima) if needed, the pilot database, and the app on :5180
+#   scripts/pilot.sh start    start Docker (colima) if needed, the pilot database, and the app on :5180.
+#                             The app runs as a background service (launchd): it keeps running after
+#                             the terminal closes, restarts if it crashes, starts again at login, and
+#                             keeps this Mac from idle-sleeping while it runs.
 #   scripts/pilot.sh stop     stop the app and the pilot database (data is kept)
 #   scripts/pilot.sh status   is it running, and the addresses to open
 #   scripts/pilot.sh backup   back up the pilot to ~/ShowroomBackups/pilot (the 18:00 job runs this)
@@ -15,11 +18,14 @@ REPO="$(cd "$(dirname "$0")/.." && pwd)"
 PILOT="$REPO/pilot"
 WEB="$REPO/web"
 APP_PORT=5180
-PID_FILE="$PILOT/app.pid"
 LOG_FILE="$PILOT/app.log"
+LABEL="com.sinolink.showroom.pilot-app"
+PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+DOMAIN="gui/$(id -u)"
 
 lan_ip() { ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo "<this-mac's-ip>"; }
-app_running() { [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; }
+app_running() { curl -s -o /dev/null --max-time 3 "http://127.0.0.1:$APP_PORT/"; }
+port_pids() { lsof -nP -t -iTCP:"$APP_PORT" -sTCP:LISTEN 2>/dev/null || true; }
 db_running() { docker inspect -f '{{.State.Running}}' supabase_db_ShowroomPilot 2>/dev/null | grep -q true; }
 
 ensure_docker() {
@@ -41,23 +47,72 @@ write_env() {
   printf 'VITE_SUPABASE_URL=/sb\nVITE_SUPABASE_ANON_KEY=%s\n' "$anon" > "$WEB/.env.pilot.local"
 }
 
+build_app() {
+  echo "→ Building the app…"
+  (cd "$WEB" && npx vite build --mode pilot --outDir dist-pilot --emptyOutDir >/dev/null)
+}
+
+stop_app() {
+  launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+  # Also an app started by hand earlier (not by the service), which would hold the port.
+  for p in $(port_pids); do kill "$p" 2>/dev/null || true; done
+}
+
+install_service() {
+  mkdir -p "$(dirname "$PLIST")"
+  cat > "$PLIST" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>$LABEL</string>
+  <key>ProgramArguments</key>
+  <array><string>/bin/bash</string><string>$REPO/scripts/pilot.sh</string><string>serve</string></array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>ThrottleInterval</key><integer>20</integer>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <key>HOME</key><string>$HOME</string>
+  </dict>
+  <key>StandardOutPath</key><string>$LOG_FILE</string>
+  <key>StandardErrorPath</key><string>$LOG_FILE</string>
+</dict>
+</plist>
+PLIST
+  launchctl bootstrap "$DOMAIN" "$PLIST"
+}
+
 case "${1:-status}" in
   start)
     ensure_docker
     if ! db_running; then echo "→ Starting the pilot database…"; (cd "$PILOT" && supabase start >/dev/null); fi
     write_env
-    if app_running; then echo "→ App already running"; else
-      echo "→ Building the app…"
-      (cd "$WEB" && npx vite build --mode pilot --outDir dist-pilot --emptyOutDir >/dev/null)
-      echo "→ Starting the app on :${APP_PORT}…"
-      (cd "$WEB" && PILOT_API_URL="$(sed -n 's/^PILOT_API_URL=//p' "$PILOT/.env")" \
-        nohup npx vite preview --mode pilot --outDir dist-pilot --port "$APP_PORT" --host </dev/null >"$LOG_FILE" 2>&1 & echo $! > "$PID_FILE"; disown)
-      for _ in $(seq 1 30); do curl -s -o /dev/null "http://127.0.0.1:$APP_PORT/" && break; sleep 1; done
-    fi
+    build_app
+    stop_app
+    echo "→ Starting the app on :${APP_PORT} (background service)…"
+    install_service
+    for _ in $(seq 1 60); do app_running && break; sleep 1; done
     "$0" status
     ;;
+  serve)
+    # Run by the background service (launchd), in the foreground. Not for direct use.
+    ensure_docker
+    db_running || (cd "$PILOT" && supabase start >/dev/null)
+    write_env
+    [ -f "$WEB/dist-pilot/index.html" ] || build_app
+    cd "$WEB"
+    PILOT_API_URL="$(sed -n 's/^PILOT_API_URL=//p' "$PILOT/.env")"
+    export PILOT_API_URL
+    echo "== $(date '+%F %T') app starting on :$APP_PORT"
+    # caffeinate -i: no idle sleep while the app is up (the display may still sleep).
+    exec caffeinate -i node node_modules/vite/bin/vite.js preview --mode pilot --outDir dist-pilot --port "$APP_PORT" --host
+    ;;
   stop)
-    if app_running; then kill "$(cat "$PID_FILE")" && rm -f "$PID_FILE"; echo "→ App stopped"; fi
+    stop_app
+    rm -f "$PLIST"
+    echo "→ App stopped"
     # Never --no-backup here: that would delete the pilot's data volumes.
     (cd "$PILOT" && supabase stop >/dev/null) && echo "→ Pilot database stopped (data kept)"
     ;;
@@ -66,7 +121,9 @@ case "${1:-status}" in
     if app_running; then
       echo "App:      running"
       echo "  On this Mac:          http://localhost:${APP_PORT}"
-      echo "  Phone / other devices: http://$(lan_ip):$APP_PORT   (same Wi-Fi)"
+      echo "  Other devices (same Wi-Fi): http://$(scutil --get LocalHostName).local:$APP_PORT   or http://$(lan_ip):$APP_PORT"
+      if launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1; then echo "  Background service: on (survives closing the terminal; starts at login)"
+      else echo "  Background service: off (run scripts/pilot.sh start)"; fi
     else echo "App:      stopped   (scripts/pilot.sh start)"; fi
     ;;
   backup)

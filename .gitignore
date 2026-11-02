@@ -20,5 +20,5 @@ pilot/supabase/signing_keys.json
 pilot/.env
 pilot/.credentials
 web/dist-pilot/
-pilot/app.pid
+
 pilot/app.log

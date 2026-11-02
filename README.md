@@ -159,10 +159,15 @@ key in `pilot/supabase/signing_keys.json`, never committed). It started empty: c
 two logins only (`web/scripts/pilot-setup.mjs`, one-time; passwords in `pilot/.credentials`).
 
 ```sh
-scripts/pilot.sh start            # Docker + pilot database + app on :5180 (prints the phone address)
+scripts/pilot.sh start            # Docker + pilot database + app on :5180 (prints the addresses)
 scripts/pilot.sh status | stop    # stop keeps the data
 scripts/pilot-schedule.sh status  # daily 18:00 backup → ~/ShowroomBackups/pilot (launchd)
 ```
+`start` installs the app as a launchd service (`com.sinolink.showroom.pilot-app`, log `pilot/app.log`):
+it keeps running after the terminal closes, restarts within ~20 s if it crashes, starts again at
+login (bringing up Docker and the database), and keeps the Mac from idle-sleeping (`caffeinate -i`).
+Closing the lid still sleeps the Mac: keep it open and on power. Other devices on the same Wi-Fi open
+`http://<LocalHostName>.local:5180` (stable) or the IP that `status` prints (can change).
 Protection: seeds, bootstrap, verify scripts and the Playwright config refuse pilot ports
 (`web/scripts/guard.mjs`); the pilot rejects the dev service key at the data API; restoring into the
 pilot always asks you to type its name. Never run `supabase db reset` or `supabase stop --no-backup`

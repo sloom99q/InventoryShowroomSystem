@@ -14,6 +14,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [react(), tailwindcss()],
   resolve: { alias: { '@': path.resolve(import.meta.dirname, 'src') } },
   server: { host: true, port: 5173, proxy: pilotProxy(mode) },
-  preview: { host: true, port: 5180, strictPort: true, proxy: pilotProxy(mode) },
+  // '.local': the pilot is opened as http://<this-mac>.local:5180 from other devices.
+  preview: { host: true, port: 5180, strictPort: true, allowedHosts: ['.local'], proxy: pilotProxy(mode) },
   test: { environment: 'node', include: ['src/**/*.test.ts'] },
 }))
