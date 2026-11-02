@@ -48,7 +48,8 @@ export function specProgress(v: VehicleOverview, d: VehicleData) {
 }
 
 export function SpecsSheet({ v }: { v: VehicleOverview }) {
-  const { t } = useTranslation('cars')
+  const { t, i18n } = useTranslation('cars')
+  const ar = i18n.language === 'ar'
   const q = useVehicleData(v.id!)
   const [onlyEmpty, setOnlyEmpty] = useState(false)
   const { canWrite } = useCompany()
@@ -77,7 +78,7 @@ export function SpecsSheet({ v }: { v: VehicleOverview }) {
         </div>
       </div>
 
-      <Section title={t('specs.identity')} titleAr="الهوية">
+      <Section title={t('specs.identity')} titleAr={ar ? 'Identity' : 'الهوية'}>
         {IDENTITY.map((r) => 'col' in r
           ? show(v[r.col] !== null && v[r.col] !== undefined && String(v[r.col]) !== '') && <ColRow key={r.col} v={v} col={r.col} label={r.label} />
           : show(!!d.fields.get(r.field)?.value_en) && <FieldRow key={r.field} v={v} def={ID_FIELD.get(r.field)!} row={d.fields.get(r.field)} canWrite={canWrite} />)}
@@ -89,7 +90,7 @@ export function SpecsSheet({ v }: { v: VehicleOverview }) {
         const listShown = s.list && show(items.length > 0)
         if (!fields.length && !listShown) return null
         return (
-          <Section key={s.key} title={s.title_en} titleAr={s.title_ar}>
+          <Section key={s.key} title={ar ? s.title_ar : s.title_en} titleAr={ar ? s.title_en : s.title_ar}>
             {fields.map((f) => <FieldRow key={f.key} v={v} def={f} row={d.fields.get(f.key)} canWrite={canWrite} />)}
             {listShown && <ListRows v={v} list={s.list!} items={items} canWrite={canWrite} />}
           </Section>
@@ -138,7 +139,8 @@ function ColRow({ v, col, label }: { v: VehicleOverview; col: Col; label: string
 }
 
 function FieldRow({ v, def, row, canWrite }: { v: VehicleOverview; def: FieldDef; row?: SpecRow; canWrite: boolean }) {
-  const { t } = useTranslation('cars')
+  const { t, i18n } = useTranslation('cars')
+  const label = i18n.language === 'ar' && def.label_ar ? def.label_ar : def.label_en
   const w = useFieldWriter(v.id!)
   const [arOpen, setArOpen] = useState(false)
   const en = row?.value_en ?? ''
@@ -146,17 +148,17 @@ function FieldRow({ v, def, row, canWrite }: { v: VehicleOverview; def: FieldDef
   const arabic = printsArabic(def.key)
   return (
     <div className={ROW} data-field={def.key}>
-      <span className="text-[14px] text-ink-2">{def.label_en}</span>
+      <span className="text-[14px] text-ink-2">{label}</span>
       <div className="min-w-0">
         <div className="flex min-w-0 flex-wrap items-center gap-x-3">
-          <InlineText id={`spec-${def.key}`} label={def.label_en} value={en} disabled={!canWrite} multiline={def.key === 'description'}
+          <InlineText id={`spec-${def.key}`} label={label} value={en} disabled={!canWrite} multiline={def.key === 'description'}
             onSave={(x) => w.setField.mutateAsync({ key: def.key, value: { en: x } })} />
           {arabic && en && !ar && !arOpen && canWrite && (
-            <button onClick={() => setArOpen(true)} className="text-[13px] text-ink-3 hover:text-accent" lang="ar" aria-label={t('specs.addArabic', { field: def.label_en })}>+ عربي</button>
+            <button onClick={() => setArOpen(true)} className="text-[13px] text-ink-3 hover:text-accent" lang="ar" aria-label={t('specs.addArabic', { field: label })}>+ عربي</button>
           )}
         </div>
         {arabic && (ar || arOpen) && (
-          <InlineText id={`spec-${def.key}-ar`} label={`${def.label_en} (${t('specs.arabic')})`} value={ar} dir="rtl" lang="ar" disabled={!canWrite}
+          <InlineText id={`spec-${def.key}-ar`} label={`${label} (${t('specs.arabic')})`} value={ar} dir="rtl" lang="ar" disabled={!canWrite}
             placeholder={arabicFor(en, null)} className="mt-0.5 text-ink-2"
             onSave={(x) => w.setField.mutateAsync({ key: def.key, value: { ar: x } }).then(() => { if (!x) setArOpen(false) })} />
         )}
