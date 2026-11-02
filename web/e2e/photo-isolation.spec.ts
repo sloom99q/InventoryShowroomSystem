@@ -6,7 +6,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { FIXTURES, login, randomChassis } from './helpers'
+import { addCarByHand, FIXTURES, login, uploadPhotos } from './helpers'
 
 const HIDDEN = path.resolve(import.meta.dirname, 'fixtures/hidden-photo.pdf')
 
@@ -45,32 +45,15 @@ test('a picture hidden under another one is never offered', async ({ page }) => 
   expect([...got.photoMode, ...got.general].join()).not.toContain('red')
 })
 
-/** Create a car by hand; returns its id. */
-async function newCar(page: Page, brand: string, model: string) {
-  await page.goto('/vehicles/new')
-  await page.getByPlaceholder('LVVDB21B9PD012345').fill(randomChassis())
-  await page.getByLabel('Brand').fill(brand)
-  await page.getByLabel('Model').fill(model)
-  await page.getByRole('button', { name: 'Save vehicle' }).click()
-  await page.waitForURL(/\/vehicles\/[0-9a-f-]{36}$/)
-  return page.url().split('/').pop()!
-}
-
-async function uploadPhoto(page: Page, id: string, file: string) {
-  await page.goto(`/vehicles/${id}?tab=photos`)
-  await page.getByRole('button', { name: 'Add' }).first().click()
-  await page.getByRole('dialog').locator('input[type=file]').first().setInputFiles(file)
-  await page.getByRole('dialog').getByRole('button', { name: 'Upload' }).click()
-  await expect(page.getByRole('dialog')).toBeHidden({ timeout: 20_000 })
-}
-
 test('two cars each show only their own photos (upload and import)', async ({ page }) => {
   test.setTimeout(120_000)
   await login(page)
-  const a = await newCar(page, 'Valtren', 'Orisa X5')
-  const b = await newCar(page, 'Northwind', 'Tarsel')
-  await uploadPhoto(page, a, path.join(FIXTURES, 'd_listing_card.png'))
-  await uploadPhoto(page, b, path.resolve(import.meta.dirname, 'fixtures/car-photo.png'))
+  // Car A gets its photo in Add car, car B on the car page; then B gets an import too.
+  const aUrl = await addCarByHand(page, { brand: 'Valtren', model: 'Orisa X5', photos: [path.join(FIXTURES, 'd_listing_card.png')] })
+  const bUrl = await addCarByHand(page, { brand: 'Northwind', model: 'Tarsel' })
+  await uploadPhotos(page, bUrl, [path.resolve(import.meta.dirname, 'fixtures/car-photo.png')])
+  const a = aUrl.split('/').pop()!
+  const b = bUrl.split('/').pop()!
 
   // Import the re-used slide deck into car B.
   await page.goto(`/vehicles/${b}/import`)

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { PageHeader } from '@/components/AppShell'
+import { StagesEditor } from './settings/StagesEditor'
 import { Button } from '@/components/ui/button'
 import { Field, Input, Select, Textarea } from '@/components/ui/form'
 import { Panel, PanelHeader } from '@/components/ui/misc'
@@ -104,8 +105,8 @@ export default function Settings() {
     onError: (e) => toast.error(friendlyError(e)),
   })
 
-  const pageBg = d.theme_mode === 'dark' ? '#1a1d22' : '#ffffff'
-  const accentWarn = contrast(d.accent_color, pageBg) < 3 ? t('lowContrast', { bg: d.theme_mode === 'dark' ? t('darkBg') : t('white') }) : undefined
+  const pageBg = '#ffffff'
+  const accentWarn = contrast(d.accent_color, pageBg) < 3 ? t('lowContrast', { bg: t('white') }) : undefined
   const sidebarDark = chromeIsDark(d.sidebar_color)
 
   return (
@@ -118,6 +119,7 @@ export default function Settings() {
       )} />
       <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
         <div className="space-y-6">
+          <StagesEditor />
           <Panel>
             <PanelHeader title={t('showroom')} />
             <div className="grid gap-4 p-5 sm:grid-cols-2">
@@ -202,21 +204,9 @@ export default function Settings() {
                 </div>
               </div>
 
-              <div className="grid gap-5 sm:grid-cols-3">
+              <div className="grid gap-5 sm:grid-cols-2">
                 <ColorField key={`a${d.accent_color}`} label={t('accent')} hint={t('accentHint')} value={d.accent_color} onChange={(v) => set({ accent_color: v })} warning={accentWarn} />
                 <ColorField key={`s${d.sidebar_color}`} label={t('sidebar')} value={d.sidebar_color} onChange={(v) => set({ sidebar_color: v })} />
-                <Field label={t('mode')}>
-                  {() => (
-                    <div className="flex rounded-md border border-line p-0.5" role="group">
-                      {(['light', 'dark'] as const).map((m) => (
-                        <button key={m} onClick={() => set({ theme_mode: m })} aria-pressed={d.theme_mode === m}
-                          className={cn('h-8 flex-1 cursor-pointer rounded-sm text-[13px]', d.theme_mode === m ? 'bg-accent text-accent-ink' : 'text-ink-2 hover:text-ink')}>
-                          {t(m)}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </Field>
               </div>
             </div>
           </Panel>

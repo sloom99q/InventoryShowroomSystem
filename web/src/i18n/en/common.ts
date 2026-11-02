@@ -2,6 +2,7 @@
 export default {
   appName: 'Showroom',
   nav: {
+    cars: 'Cars',
     main: 'Main',
     dashboard: 'Dashboard',
     vehicles: 'Vehicles',
@@ -35,7 +36,7 @@ export default {
     notNow: 'Not now',
   },
   search: {
-    placeholder: 'Search chassis number, brand or model',
+    placeholder: 'Search chassis number, e.g. last 6 digits…',
     label: 'Search vehicles',
     searching: 'Searching…',
     noMatch: 'No vehicle matches “{{term}}”.',

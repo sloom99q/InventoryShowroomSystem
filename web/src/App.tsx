@@ -1,22 +1,26 @@
 import { lazy, Suspense } from 'react'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom'
 import { AppShell } from '@/components/AppShell'
 import { PageLoader } from '@/components/ui/misc'
 import { useAuth } from '@/lib/auth'
-import { Dashboard } from '@/pages/Dashboard'
 import { Login, NoAccess } from '@/pages/Login'
-import { VehicleDetail } from '@/pages/VehicleDetail'
-import { Vehicles } from '@/pages/Vehicles'
-import { VehicleNew } from '@/pages/VehicleNew'
+import CarsPage from '@/pages/cars/CarsPage'
 
+const AddCar = lazy(() => import('@/pages/cars/AddCar'))
+const CarPage = lazy(() => import('@/pages/car/CarPage'))
 const Documents = lazy(() => import('@/pages/Documents'))
 const Expenses = lazy(() => import('@/pages/Expenses'))
 const ImportExport = lazy(() => import('@/pages/ImportExport'))
 const Staff = lazy(() => import('@/pages/Staff'))
 const Settings = lazy(() => import('@/pages/Settings'))
 const ImportFiles = lazy(() => import('@/pages/import/ImportFiles'))
-const FillSpecs = lazy(() => import('@/pages/fill/FillSpecs'))
 const SalesDocuments = lazy(() => import('@/pages/documents/SalesDocuments'))
+
+/** The old "Fill specs" page is now the car page's Specs tab. */
+function ToSpecs() {
+  const { id } = useParams()
+  return <Navigate to={`/vehicles/${id}`} replace />
+}
 
 export default function App() {
   const { session, loading, profile, company, isAdmin } = useAuth()
@@ -29,20 +33,20 @@ export default function App() {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route element={<AppShell />}>
-            <Route index element={<Dashboard />} />
-            <Route path="vehicles" element={<Vehicles />} />
-            <Route path="vehicles/new" element={<VehicleNew />} />
+            <Route index element={<Navigate to="/vehicles" replace />} />
+            <Route path="vehicles" element={<CarsPage />} />
+            <Route path="vehicles/new" element={<AddCar />} />
             <Route path="vehicles/import" element={<Navigate to="/vehicles/new" replace />} />
-            <Route path="vehicles/:id" element={<VehicleDetail />} />
+            <Route path="vehicles/:id" element={<CarPage />} />
             {isAdmin && <Route path="vehicles/:id/import" element={<ImportFiles key="existing" />} />}
-            <Route path="vehicles/:id/specs" element={<FillSpecs />} />
+            <Route path="vehicles/:id/specs" element={<ToSpecs />} />
             <Route path="vehicles/:id/documents" element={<SalesDocuments />} />
             <Route path="documents" element={<Documents />} />
             <Route path="expenses" element={<Expenses />} />
-            <Route path="import" element={<ImportExport />} />
+            {isAdmin && <Route path="import" element={<ImportExport />} />}
             {isAdmin && <Route path="staff" element={<Staff />} />}
             {isAdmin && <Route path="settings" element={<Settings />} />}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/vehicles" replace />} />
           </Route>
         </Routes>
       </Suspense>

@@ -1,22 +1,16 @@
-// Specifications tab: the same compact table as "Fill specs", read-only, with one
-// button to open the Fill specs page. Facts that match no field stay here.
-import { Pencil, Trash2 } from 'lucide-react'
+// Facts read from imported files that match no field ("Other information").
+import { Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { type SpecRow, useFieldWriter, useVehicleData } from '@/api/fields'
-import { SpecTable } from '@/components/specs/SpecTable'
-import { Button, buttonVariants } from '@/components/ui/button'
+import { type SpecRow, useFieldWriter } from '@/api/fields'
+import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/form'
-import { ErrorNote, PageLoader } from '@/components/ui/misc'
-import { useCompany } from '@/lib/auth'
 import { FIELDS, labelFor, STORED_FIELDS } from '@/lib/fields'
 import { friendlyError } from '@/lib/supabase'
-import type { VehicleOverview } from '@/lib/types'
 
-type OtherRow = SpecRow & { documents?: { original_filename: string } | null }
+export type OtherRow = SpecRow & { documents?: { original_filename: string } | null }
 
-function OtherInfo({ rows, vehicleId, canWrite }: { rows: OtherRow[]; vehicleId: string; canWrite: boolean }) {
+export function OtherInfo({ rows, vehicleId, canWrite }: { rows: OtherRow[]; vehicleId: string; canWrite: boolean }) {
   const { t } = useTranslation('vehicle')
   const w = useFieldWriter(vehicleId)
   const err = (e: unknown) => toast.error(friendlyError(e))
@@ -62,24 +56,5 @@ function OtherInfo({ rows, vehicleId, canWrite }: { rows: OtherRow[]; vehicleId:
         ))}
       </ul>
     </details>
-  )
-}
-
-export function SpecsTab({ vehicle }: { vehicle: VehicleOverview }) {
-  const { t } = useTranslation('vehicle')
-  const { canWrite } = useCompany()
-  const q = useVehicleData(vehicle.id!)
-  if (q.isLoading) return <PageLoader />
-  if (q.error || !q.data) return <ErrorNote error={q.error} />
-  return (
-    <div className="space-y-5">
-      {canWrite && (
-        <div className="flex justify-end">
-          <Link to={`/vehicles/${vehicle.id}/specs`} className={buttonVariants({ variant: 'primary' })}><Pencil />{t('fill.open')}</Link>
-        </div>
-      )}
-      <SpecTable vehicle={vehicle} data={q.data} mode="read" />
-      {q.data.other.length > 0 && <OtherInfo rows={q.data.other as OtherRow[]} vehicleId={vehicle.id!} canWrite={canWrite} />}
-    </div>
   )
 }

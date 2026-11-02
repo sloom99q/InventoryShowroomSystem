@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import path from 'node:path'
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs'
-import { importFictionalCar, login } from './helpers'
+import { importFictionalCar, insertCar, login } from './helpers'
 
 const FX = path.resolve(import.meta.dirname, 'fixtures')
 const OUT = path.resolve(import.meta.dirname, '../test-results/documents')
@@ -58,13 +58,16 @@ test('generates the spec sheet and brochure for the fictional car', async ({ pag
   await expect(page.getByText('Settings saved')).toBeVisible()
 
   const vehicleUrl = await importFictionalCar(page, [path.join(FX, 'car-photo.png')])
-  // Key features are written on the Fill specs page (English only), not imported.
-  await page.goto(`${vehicleUrl}/specs`)
+  // Key features are written on the car page's Specs tab (English only), not imported.
+  await page.goto(vehicleUrl)
+  await page.locator('button[data-inline="add-key_features"]').click()
   for (const f of ['Panoramic glass roof', 'Heated front seats']) {
-    await page.getByLabel('Add key feature').fill(f)
-    await page.getByLabel('Add key feature').press('Enter')
-    await expect.poll(() => page.locator('#fill-section-key_features input[id^=fill-item]').evaluateAll((els) => els.map((e) => (e as HTMLInputElement).value))).toContain(f)
+    await page.keyboard.type(f)
+    await page.keyboard.press('Enter')
   }
+  await page.keyboard.press('Escape')
+  const keyFeatures = page.locator('section').filter({ has: page.getByRole('heading', { name: /Key features/ }) })
+  for (const f of ['Panoramic glass roof', 'Heated front seats']) await expect(keyFeatures.getByRole('button', { name: new RegExp(`^Item \\d+: ${f}$`) })).toHaveCount(1)
   await page.goto(`${vehicleUrl}/documents`)
 
   // ---- Spec sheet --------------------------------------------------------
@@ -99,12 +102,8 @@ test('generates the spec sheet and brochure for the fictional car', async ({ pag
 
 test('missing data blocks or warns before export', async ({ page }) => {
   await login(page)
-  await page.goto('/vehicles/new?mode=manual')
-  const chassis = `TSTMISS${Date.now().toString().slice(-10)}`
-  await page.getByPlaceholder('LVVDB21B9PD012345').fill(chassis)
-  await page.getByRole('button', { name: 'Save vehicle' }).click()
-  await page.waitForURL(/\/vehicles\/[0-9a-f-]{36}$/)
-  await page.goto(`${page.url()}/documents`)
+  // A car with only its chassis number (made directly; Add car itself asks for brand and model).
+  await page.goto(`${await insertCar(page, {})}/documents`)
   await expect(page.locator('[data-issue=missing_brand]')).toBeVisible({ timeout: 60_000 })
   await expect(page.locator('[data-issue=no_price]')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Export PDF' })).toBeDisabled()

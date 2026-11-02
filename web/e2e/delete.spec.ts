@@ -2,18 +2,14 @@
 // hand only — no "From documents", no import, no permanent delete on her screens.
 import { expect, test } from '@playwright/test'
 import path from 'node:path'
-import { addCarByHand, FIXTURES, importInto, login, loginSecretary } from './helpers'
+import { addCarByHand, FIXTURES, importInto, login, loginSecretary, uploadPhotos } from './helpers'
 
 test('an admin deletes a car permanently: its rows and its stored files are gone', async ({ page }) => {
   test.setTimeout(120_000)
   await login(page)
   const url = await addCarByHand(page, { brand: 'Valtren', model: 'Orisa X5', year: '2024' })
   const id = url.split('/').pop()!
-  await page.goto(`${url}?tab=photos`)
-  await page.getByRole('button', { name: 'Add' }).first().click()
-  await page.getByRole('dialog').locator('input[type=file]').first().setInputFiles(path.join(FIXTURES, 'd_listing_card.png'))
-  await page.getByRole('dialog').getByRole('button', { name: 'Upload' }).click()
-  await expect(page.getByRole('dialog')).toBeHidden({ timeout: 20_000 })
+  await uploadPhotos(page, url, [path.join(FIXTURES, 'd_listing_card.png')])
   await importInto(page, url, [path.resolve(import.meta.dirname, 'fixtures/hidden-photo.pdf')])
 
   const files = await page.evaluate(async (id) => {
@@ -25,8 +21,8 @@ test('an admin deletes a car permanently: its rows and its stored files are gone
   expect(files.length).toBeGreaterThanOrEqual(3)
 
   await page.goto(url)
-  const chassis = (await page.locator('.vin').first().innerText()).trim()
-  await page.getByRole('button', { name: 'More' }).click()
+  const chassis = (await page.getByTestId('chassis-hero').innerText()).trim()
+  await page.getByRole('button', { name: 'More actions' }).click()
   await page.getByRole('menuitem', { name: 'Delete permanently…' }).click()
   const dialog = page.getByRole('dialog')
   await expect(dialog).toContainText(chassis)
@@ -53,12 +49,12 @@ test('an admin deletes a car permanently: its rows and its stored files are gone
 test('the secretary adds cars by hand only: no documents import, no permanent delete', async ({ page }) => {
   await loginSecretary(page)
   await page.goto('/vehicles/new')
-  await expect(page.getByPlaceholder('LVVDB21B9PD012345')).toBeVisible()
+  await expect(page.locator('#chassis-input')).toBeVisible()
   await expect(page.getByText('From documents')).toHaveCount(0)
   await expect(page.getByText('Drop files here, or click to choose')).toHaveCount(0)
 
   const url = await addCarByHand(page, { brand: 'Northwind', model: 'Tarsel' })
-  await page.getByRole('button', { name: 'More' }).click()
+  await page.getByRole('button', { name: 'More actions' }).click()
   await expect(page.getByRole('menuitem', { name: 'Archive' })).toBeVisible()
   await expect(page.getByRole('menuitem', { name: 'Import from file…' })).toHaveCount(0)
   await expect(page.getByRole('menuitem', { name: 'Delete permanently…' })).toHaveCount(0)

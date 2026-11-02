@@ -6,6 +6,7 @@ import type en from '../en/common'
 const ar: Messages<typeof en> = {
   appName: 'Showroom',
   nav: {
+    cars: 'السيارات',
     main: 'القائمة الرئيسية',
     dashboard: 'لوحة التحكم',
     vehicles: 'السيارات',
@@ -39,7 +40,7 @@ const ar: Messages<typeof en> = {
     notNow: 'ليس الآن',
   },
   search: {
-    placeholder: 'ابحث برقم الشاصي أو الماركة أو الموديل',
+    placeholder: 'ابحث برقم الشاصي، مثلاً آخر 6 خانات…',
     label: 'البحث عن سيارة',
     searching: 'جارٍ البحث…',
     noMatch: 'لا توجد سيارة تطابق "{{term}}".',

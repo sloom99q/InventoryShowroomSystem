@@ -59,12 +59,14 @@ export function todayDubai(): string {
 export function fmtMoney(v: number | string | null | undefined, currency = 'AED', short = false): string {
   if (v === null || v === undefined || v === '') return '—'
   const n = typeof v === 'string' ? Number(v) : v
+  // Whole dirhams show without ".00" (AED 129,000); fils show when there are any.
+  const whole = short || Number.isInteger(Math.round(n * 100) / 100)
   return new Intl.NumberFormat(intlLocale(), {
     style: 'currency',
     currency,
     currencyDisplay: i18n.language === 'ar' ? 'symbol' : 'code',
-    minimumFractionDigits: short ? 0 : 2,
-    maximumFractionDigits: short ? 0 : 2,
+    minimumFractionDigits: whole ? 0 : 2,
+    maximumFractionDigits: whole ? 0 : 2,
   }).format(n).replace(/\u00a0/g, ' ')
 }
 

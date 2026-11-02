@@ -8,16 +8,17 @@ export const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: 'bg-accent text-accent-ink hover:brightness-110',
+        primary: 'bg-accent text-accent-ink shadow-[0_2px_8px_color-mix(in_srgb,var(--brand)_25%,transparent)] hover:brightness-95',
+        dark: 'bg-ink text-white hover:bg-ink/90',
         secondary: 'bg-surface text-ink border border-line hover:bg-hover',
         ghost: 'text-ink-2 hover:text-ink hover:bg-raised',
         danger: 'bg-surface text-danger border border-danger/40 hover:bg-danger/10',
       },
       size: {
         sm: 'h-8 px-3 text-[13px]',
-        md: 'h-9 px-3.5 text-sm',
-        lg: 'h-11 px-5 text-[15px]',
-        icon: 'size-9',
+        md: 'h-10 px-4 text-[14px] font-semibold',
+        lg: 'h-12 px-6 text-[15px] font-semibold',
+        icon: 'size-10',
         'icon-sm': 'size-8',
       },
     },

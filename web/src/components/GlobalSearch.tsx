@@ -64,7 +64,7 @@ export function GlobalSearch({ className, autoFocus }: { className?: string; aut
         aria-controls="global-search-results"
         autoComplete="off"
         spellCheck={false}
-        className="h-10 w-full rounded-md border border-line bg-surface ps-9 pe-14 text-sm placeholder:text-ink-3 focus:border-accent focus:outline-none"
+        className="h-[42px] w-full rounded-xl border border-line bg-surface ps-10 pe-14 text-[15px] placeholder:text-ink-3 focus:border-ink focus:outline-none"
       />
       <span className="pointer-events-none absolute end-3 top-1/2 hidden -translate-y-1/2 sm:block"><Kbd>⌘K</Kbd></span>
       {open && term.trim().length >= 2 && (

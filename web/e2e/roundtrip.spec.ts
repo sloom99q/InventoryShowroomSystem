@@ -91,7 +91,7 @@ test('importing the real brochure offers its cover and all 17 photo pages, pre-s
   test.setTimeout(180_000)
   await login(page)
   await addCarByHand(page)
-  await page.getByRole('button', { name: 'More' }).click()
+  await page.getByRole('button', { name: 'More actions' }).click()
   await page.getByRole('menuitem', { name: 'Import from file…' }).click()
   await expect(page.getByText('Drop files here, or click to choose')).toBeVisible()
   await page.locator('input[type=file][multiple][accept*=".docx"]').setInputFiles(path.join(KIT, 'real-fixtures/VOYAH_FREE.pdf'))

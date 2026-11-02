@@ -34,7 +34,8 @@ function mix(hex: string, other: string, amount: number) {
 
 export function applyBranding(b: Branding) {
   const root = document.documentElement
-  root.dataset.theme = b.theme_mode
+  // Rebuild v3: one light theme for everyone (easier to read all day); the accent stays the company's.
+  root.dataset.theme = 'light'
   const s = root.style
   s.setProperty('--brand', b.accent_color)
   s.setProperty('--brand-ink', inkOn(b.accent_color))
@@ -58,6 +59,4 @@ export const PRESETS: { name: string; accent: string; sidebar: string; mode: 'li
   { name: 'Red on white', accent: '#b3121a', sidebar: '#ffffff', mode: 'light' },
   { name: 'Cobalt', accent: '#2f5bd3', sidebar: '#ffffff', mode: 'light' },
   { name: 'Emerald', accent: '#0f7a5a', sidebar: '#0f2a22', mode: 'light' },
-  { name: 'Graphite', accent: '#c9a96e', sidebar: '#16181b', mode: 'dark' },
-  { name: 'Midnight', accent: '#e4572e', sidebar: '#10131a', mode: 'dark' },
 ]

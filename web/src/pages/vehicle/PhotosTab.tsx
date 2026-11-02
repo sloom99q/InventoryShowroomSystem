@@ -94,7 +94,7 @@ export function AddPhotos({ companyId, vehicleId, type, onClose }: { companyId: 
   )
 }
 
-function Lightbox({ list, start, vehicleId, canWrite, onClose }: { list: ImageRow[]; start: number; vehicleId: string; canWrite: boolean; onClose: () => void }) {
+export function Lightbox({ list, start, vehicleId, canWrite, onClose }: { list: ImageRow[]; start: number; vehicleId: string; canWrite: boolean; onClose: () => void }) {
   const { t, i18n } = useTranslation(['vehicle', 'common'])
   const [i, setI] = useState(start)
   const [confirm, setConfirm] = useState(false)

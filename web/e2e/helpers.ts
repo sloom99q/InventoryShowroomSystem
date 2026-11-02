@@ -44,22 +44,45 @@ export async function loginSecretary(page: Page) {
   await expect(page.locator('main')).toBeVisible()
 }
 
-/** Add a car by hand (Add vehicle). Returns its URL. */
-export async function addCarByHand(page: Page, car: { brand?: string; model?: string; year?: string } = {}) {
+/** Add a car with the 5-step Add car (photos skipped unless given). Returns its URL. */
+export async function addCarByHand(page: Page, car: { brand?: string; model?: string; year?: string; chassis?: string; photos?: string[] } = {}) {
   await page.goto('/vehicles/new')
-  await page.getByPlaceholder('LVVDB21B9PD012345').fill(randomChassis())
-  if (car.brand) await page.getByLabel('Brand').fill(car.brand)
-  if (car.model) await page.getByLabel('Model').fill(car.model)
-  if (car.year) await page.getByLabel('Year').fill(car.year)
-  await page.getByRole('button', { name: 'Save vehicle' }).click()
+  await page.locator('#chassis-input').fill(car.chassis ?? randomChassis())
+  await expect(page.getByText('Not in the system yet')).toBeVisible()
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByLabel('Brand').fill(car.brand ?? 'Valtren')
+  await page.getByLabel('Model').fill(car.model ?? 'Orisa X5')
+  if (car.year) await page.getByLabel('Year').selectOption(car.year)
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await page.getByRole('button', { name: 'Save car' }).click()
+  await expect(page.getByRole('heading', { name: 'Arrival photos' })).toBeVisible()
+  if (car.photos?.length) {
+    await page.getByTestId('photo-input').setInputFiles(car.photos)
+    await page.getByRole('button', { name: /^Upload \d+ photos?$/ }).click()
+  } else {
+    await page.getByRole('button', { name: 'Skip' }).click()
+  }
+  await expect(page.getByRole('heading', { name: 'Car added' })).toBeVisible({ timeout: 30_000 })
+  await page.getByRole('button', { name: 'Open the car' }).click()
   await page.waitForURL(/\/vehicles\/[0-9a-f-]{36}$/)
   return page.url().replace(/\?.*$/, '')
+}
+
+/** Create a car straight in the database (for tests that need an incomplete car). */
+export async function insertCar(page: Page, fields: Record<string, unknown>) {
+  const id = await page.evaluate(async (f) => {
+    const { supabase } = await import('/src/lib/supabase.ts')
+    const { data, error } = await supabase.from('vehicles').insert(f as never).select('id').single()
+    if (error) throw new Error(error.message)
+    return data.id as string
+  }, { chassis_number: randomChassis(), ...fields })
+  return `/vehicles/${id}`
 }
 
 /** Import files into an existing car (admin: car ⋯ menu → Import from file…), resolving any choice with its first option. */
 export async function importInto(page: Page, carUrl: string, files: string[]) {
   await page.goto(carUrl)
-  await page.getByRole('button', { name: 'More' }).click()
+  await page.getByRole('button', { name: 'More actions' }).click()
   await page.getByRole('menuitem', { name: 'Import from file…' }).click()
   await expect(page.getByText('Drop files here, or click to choose')).toBeVisible()
   await page.locator('input[type=file][multiple][accept*=".docx"]').setInputFiles(files)
@@ -85,4 +108,12 @@ export async function importFictionalCar(page: Page, extraFiles: string[] = []) 
   const FX = path.resolve(import.meta.dirname, 'fixtures')
   const url = await addCarByHand(page)
   return importInto(page, url, [...['a-brochure-bilingual.pdf', 'b-spec-table.pdf', 'c-summary.docx', 'd-spec-sheet.xlsx'].map((f) => path.join(FX, f)), ...extraFiles])
+}
+
+/** Add photos on the car page (Photos tab), waiting until they show. */
+export async function uploadPhotos(page: Page, carUrl: string, files: string[]) {
+  await page.goto(`${carUrl}?tab=photos`)
+  const before = await page.locator('[data-photo-id]').count()
+  await page.getByTestId('photos-upload').setInputFiles(files)
+  await expect(page.locator('[data-photo-id]')).toHaveCount(before + files.length, { timeout: 30_000 })
 }

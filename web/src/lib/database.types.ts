@@ -7,14 +7,14 @@ export type Database = {
           Tables: {
             "accessories": {
                   Row: {
-                    "company_id": string,"created_at": string,"id": string,"item_name": string,"item_type": Database["public"]['Enums']["accessory_type"],"notes": string | null,"quantity": number,"status": Database["public"]['Enums']["item_status"],"updated_at": string,"vehicle_id": string
+                    "company_id": string,"created_at": string,"id": string,"item_name": string,"item_type": Database["public"]['Enums']["accessory_type"],"notes": string | null,"quantity": number | null,"status": Database["public"]['Enums']["item_status"],"updated_at": string,"vehicle_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "company_id"?: string,"created_at"?: string,"id"?: string,"item_name": string,"item_type": Database["public"]['Enums']["accessory_type"],"notes"?: string | null,"quantity"?: number,"status"?: Database["public"]['Enums']["item_status"],"updated_at"?: string,"vehicle_id": string
+                    "company_id"?: string,"created_at"?: string,"id"?: string,"item_name": string,"item_type": Database["public"]['Enums']["accessory_type"],"notes"?: string | null,"quantity"?: number | null,"status"?: Database["public"]['Enums']["item_status"],"updated_at"?: string,"vehicle_id": string
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"id"?: string,"item_name"?: string,"item_type"?: Database["public"]['Enums']["accessory_type"],"notes"?: string | null,"quantity"?: number,"status"?: Database["public"]['Enums']["item_status"],"updated_at"?: string,"vehicle_id"?: string
+                    "company_id"?: string,"created_at"?: string,"id"?: string,"item_name"?: string,"item_type"?: Database["public"]['Enums']["accessory_type"],"notes"?: string | null,"quantity"?: number | null,"status"?: Database["public"]['Enums']["item_status"],"updated_at"?: string,"vehicle_id"?: string
                   }
                   Relationships: [
                     {
@@ -157,19 +157,45 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
-                },"vehicle_events": {
+                },"stages": {
                   Row: {
-                    "company_id": string,"created_at": string,"created_by": string | null,"description": string | null,"event_at": string,"event_type": string,"from_status": Database["public"]['Enums']["vehicle_status"] | null,"id": string,"to_status": Database["public"]['Enums']["vehicle_status"] | null,"vehicle_id": string
+                    "color": string,"company_id": string,"created_at": string,"id": string,"name_ar": string | null,"name_en": string,"position": number,"status": Database["public"]['Enums']["vehicle_status"]
                   }
                   ComputedFields: never
                   Insert: {
-                    "company_id"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"event_at"?: string,"event_type": string,"from_status"?: Database["public"]['Enums']["vehicle_status"] | null,"id"?: string,"to_status"?: Database["public"]['Enums']["vehicle_status"] | null,"vehicle_id": string
+                    "color"?: string,"company_id"?: string,"created_at"?: string,"id"?: string,"name_ar"?: string | null,"name_en": string,"position": number,"status"?: Database["public"]['Enums']["vehicle_status"]
                   }
                   Update: {
-                    "company_id"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"event_at"?: string,"event_type"?: string,"from_status"?: Database["public"]['Enums']["vehicle_status"] | null,"id"?: string,"to_status"?: Database["public"]['Enums']["vehicle_status"] | null,"vehicle_id"?: string
+                    "color"?: string,"company_id"?: string,"created_at"?: string,"id"?: string,"name_ar"?: string | null,"name_en"?: string,"position"?: number,"status"?: Database["public"]['Enums']["vehicle_status"]
                   }
                   Relationships: [
                     {
+      foreignKeyName: "stages_company_id_fkey"
+      columns: ["company_id"]
+isOneToOne: false
+      referencedRelation: "companies"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"vehicle_events": {
+                  Row: {
+                    "company_id": string,"created_at": string,"created_by": string | null,"description": string | null,"event_at": string,"event_type": string,"from_status": Database["public"]['Enums']["vehicle_status"] | null,"id": string,"stage_id": string | null,"stage_name": string | null,"to_status": Database["public"]['Enums']["vehicle_status"] | null,"vehicle_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "company_id"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"event_at"?: string,"event_type": string,"from_status"?: Database["public"]['Enums']["vehicle_status"] | null,"id"?: string,"stage_id"?: string | null,"stage_name"?: string | null,"to_status"?: Database["public"]['Enums']["vehicle_status"] | null,"vehicle_id": string
+                  }
+                  Update: {
+                    "company_id"?: string,"created_at"?: string,"created_by"?: string | null,"description"?: string | null,"event_at"?: string,"event_type"?: string,"from_status"?: Database["public"]['Enums']["vehicle_status"] | null,"id"?: string,"stage_id"?: string | null,"stage_name"?: string | null,"to_status"?: Database["public"]['Enums']["vehicle_status"] | null,"vehicle_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "vehicle_events_stage_id_fkey"
+      columns: ["stage_id"]
+isOneToOne: false
+      referencedRelation: "stages"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "vehicle_events_vehicle_id_company_id_fkey"
       columns: ["vehicle_id","company_id"]
 isOneToOne: false
@@ -185,14 +211,14 @@ isOneToOne: false
                   ]
                 },"vehicle_images": {
                   Row: {
-                    "caption": string | null,"captured_at": string | null,"company_id": string,"deleted_at": string | null,"file_size": number,"id": string,"image_type": Database["public"]['Enums']["image_type"],"mime_type": string,"original_filename": string,"storage_path": string,"superseded_at": string | null,"thumbnail_path": string | null,"uploaded_at": string,"uploaded_by": string | null,"vehicle_id": string
+                    "caption": string | null,"captured_at": string | null,"company_id": string,"deleted_at": string | null,"file_size": number,"id": string,"image_type": Database["public"]['Enums']["image_type"],"is_cover": boolean,"mime_type": string,"original_filename": string,"sort_order": number | null,"storage_path": string,"superseded_at": string | null,"thumbnail_path": string | null,"uploaded_at": string,"uploaded_by": string | null,"vehicle_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "caption"?: string | null,"captured_at"?: string | null,"company_id"?: string,"deleted_at"?: string | null,"file_size": number,"id"?: string,"image_type": Database["public"]['Enums']["image_type"],"mime_type": string,"original_filename": string,"storage_path": string,"superseded_at"?: string | null,"thumbnail_path"?: string | null,"uploaded_at"?: string,"uploaded_by"?: string | null,"vehicle_id": string
+                    "caption"?: string | null,"captured_at"?: string | null,"company_id"?: string,"deleted_at"?: string | null,"file_size": number,"id"?: string,"image_type": Database["public"]['Enums']["image_type"],"is_cover"?: boolean,"mime_type": string,"original_filename": string,"sort_order"?: number | null,"storage_path": string,"superseded_at"?: string | null,"thumbnail_path"?: string | null,"uploaded_at"?: string,"uploaded_by"?: string | null,"vehicle_id": string
                   }
                   Update: {
-                    "caption"?: string | null,"captured_at"?: string | null,"company_id"?: string,"deleted_at"?: string | null,"file_size"?: number,"id"?: string,"image_type"?: Database["public"]['Enums']["image_type"],"mime_type"?: string,"original_filename"?: string,"storage_path"?: string,"superseded_at"?: string | null,"thumbnail_path"?: string | null,"uploaded_at"?: string,"uploaded_by"?: string | null,"vehicle_id"?: string
+                    "caption"?: string | null,"captured_at"?: string | null,"company_id"?: string,"deleted_at"?: string | null,"file_size"?: number,"id"?: string,"image_type"?: Database["public"]['Enums']["image_type"],"is_cover"?: boolean,"mime_type"?: string,"original_filename"?: string,"sort_order"?: number | null,"storage_path"?: string,"superseded_at"?: string | null,"thumbnail_path"?: string | null,"uploaded_at"?: string,"uploaded_by"?: string | null,"vehicle_id"?: string
                   }
                   Relationships: [
                     {
@@ -243,14 +269,14 @@ isOneToOne: false
                   ]
                 },"vehicles": {
                   Row: {
-                    "acquisition_price": number | null,"archived_at": string | null,"arrival_at": string | null,"brand": string | null,"chassis_normalized": string | null,"chassis_number": string,"chassis_verified": boolean,"company_id": string,"created_at": string,"created_by": string | null,"delivered_at": string | null,"doc_settings": NonNullable<Json>,"exterior_color": string | null,"id": string,"interior_color": string | null,"listing_price": number | null,"location": string | null,"mileage_km": number | null,"model": string | null,"notes": string | null,"sale_price": number | null,"sold_at": string | null,"status": Database["public"]['Enums']["vehicle_status"],"trim_level": string | null,"updated_at": string,"year": number | null
+                    "acquisition_price": number | null,"archived_at": string | null,"arrival_at": string | null,"brand": string | null,"chassis_normalized": string | null,"chassis_number": string,"chassis_verified": boolean,"company_id": string,"created_at": string,"created_by": string | null,"delivered_at": string | null,"doc_settings": NonNullable<Json>,"exterior_color": string | null,"id": string,"interior_color": string | null,"labels": (string)[],"listing_price": number | null,"location": string | null,"mileage_km": number | null,"model": string | null,"notes": string | null,"sale_price": number | null,"sold_at": string | null,"stage_id": string | null,"status": Database["public"]['Enums']["vehicle_status"],"trim_level": string | null,"updated_at": string,"year": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "acquisition_price"?: number | null,"archived_at"?: string | null,"arrival_at"?: string | null,"brand"?: string | null,"chassis_normalized"?: never,"chassis_number": string,"chassis_verified"?: boolean,"company_id"?: string,"created_at"?: string,"created_by"?: string | null,"delivered_at"?: string | null,"doc_settings"?: NonNullable<Json>,"exterior_color"?: string | null,"id"?: string,"interior_color"?: string | null,"listing_price"?: number | null,"location"?: string | null,"mileage_km"?: number | null,"model"?: string | null,"notes"?: string | null,"sale_price"?: number | null,"sold_at"?: string | null,"status"?: Database["public"]['Enums']["vehicle_status"],"trim_level"?: string | null,"updated_at"?: string,"year"?: number | null
+                    "acquisition_price"?: number | null,"archived_at"?: string | null,"arrival_at"?: string | null,"brand"?: string | null,"chassis_normalized"?: never,"chassis_number": string,"chassis_verified"?: boolean,"company_id"?: string,"created_at"?: string,"created_by"?: string | null,"delivered_at"?: string | null,"doc_settings"?: NonNullable<Json>,"exterior_color"?: string | null,"id"?: string,"interior_color"?: string | null,"labels"?: (string)[],"listing_price"?: number | null,"location"?: string | null,"mileage_km"?: number | null,"model"?: string | null,"notes"?: string | null,"sale_price"?: number | null,"sold_at"?: string | null,"stage_id"?: string | null,"status"?: Database["public"]['Enums']["vehicle_status"],"trim_level"?: string | null,"updated_at"?: string,"year"?: number | null
                   }
                   Update: {
-                    "acquisition_price"?: number | null,"archived_at"?: string | null,"arrival_at"?: string | null,"brand"?: string | null,"chassis_normalized"?: never,"chassis_number"?: string,"chassis_verified"?: boolean,"company_id"?: string,"created_at"?: string,"created_by"?: string | null,"delivered_at"?: string | null,"doc_settings"?: NonNullable<Json>,"exterior_color"?: string | null,"id"?: string,"interior_color"?: string | null,"listing_price"?: number | null,"location"?: string | null,"mileage_km"?: number | null,"model"?: string | null,"notes"?: string | null,"sale_price"?: number | null,"sold_at"?: string | null,"status"?: Database["public"]['Enums']["vehicle_status"],"trim_level"?: string | null,"updated_at"?: string,"year"?: number | null
+                    "acquisition_price"?: number | null,"archived_at"?: string | null,"arrival_at"?: string | null,"brand"?: string | null,"chassis_normalized"?: never,"chassis_number"?: string,"chassis_verified"?: boolean,"company_id"?: string,"created_at"?: string,"created_by"?: string | null,"delivered_at"?: string | null,"doc_settings"?: NonNullable<Json>,"exterior_color"?: string | null,"id"?: string,"interior_color"?: string | null,"labels"?: (string)[],"listing_price"?: number | null,"location"?: string | null,"mileage_km"?: number | null,"model"?: string | null,"notes"?: string | null,"sale_price"?: number | null,"sold_at"?: string | null,"stage_id"?: string | null,"status"?: Database["public"]['Enums']["vehicle_status"],"trim_level"?: string | null,"updated_at"?: string,"year"?: number | null
                   }
                   Relationships: [
                     {
@@ -259,6 +285,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "vehicles_stage_fk"
+      columns: ["stage_id","company_id"]
+isOneToOne: false
+      referencedRelation: "stages"
+      referencedColumns: ["id","company_id"]
     }
                   ]
                 }
@@ -266,7 +298,7 @@ isOneToOne: false
           Views: {
             "vehicle_overview": {
                   Row: {
-                    "accessory_count": number | null,"acquisition_price": number | null,"archived_at": string | null,"arrival_at": string | null,"brand": string | null,"chassis_normalized": string | null,"chassis_number": string,"chassis_verified": boolean,"company_id": string,"cover_thumbnail_path": string | null,"created_at": string,"created_by": string | null,"delivered_at": string | null,"doc_settings": NonNullable<Json>,"document_count": number | null,"expense_total": number | null,"exterior_color": string | null,"id": string,"interior_color": string | null,"listing_price": number | null,"location": string | null,"mileage_km": number | null,"missing_accessories": number | null,"model": string | null,"notes": string | null,"sale_price": number | null,"sold_at": string | null,"status": Database["public"]['Enums']["vehicle_status"],"trim_level": string | null,"unknown_accessories": number | null,"updated_at": string,"year": number | null
+                    "accessory_count": number | null,"acquisition_price": number | null,"archived_at": string | null,"arrival_at": string | null,"brand": string | null,"chassis_normalized": string | null,"chassis_number": string,"chassis_verified": boolean,"company_id": string,"cover_thumbnail_path": string | null,"created_at": string,"created_by": string | null,"delivered_at": string | null,"doc_settings": NonNullable<Json>,"document_count": number | null,"expense_total": number | null,"exterior_color": string | null,"id": string,"interior_color": string | null,"labels": (string)[],"listing_price": number | null,"location": string | null,"mileage_km": number | null,"missing_accessories": number | null,"missing_names": (string)[] | null,"model": string | null,"notes": string | null,"photo_count": number | null,"sale_price": number | null,"sold_at": string | null,"stage_color": string | null,"stage_id": string | null,"stage_name": string | null,"stage_name_ar": string | null,"stage_position": number | null,"status": Database["public"]['Enums']["vehicle_status"],"trim_level": string | null,"unknown_accessories": number | null,"updated_at": string,"year": number | null
                   }
                   ComputedFields: never
                   Relationships: [
@@ -276,6 +308,12 @@ isOneToOne: false
 isOneToOne: false
       referencedRelation: "companies"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "vehicles_stage_fk"
+      columns: ["stage_id","company_id"]
+isOneToOne: false
+      referencedRelation: "stages"
+      referencedColumns: ["id","company_id"]
     }
                   ]
                 }
@@ -330,6 +368,7 @@ isOneToOne: false
 "exterior_color": string | null,
 "id": string,
 "interior_color": string | null,
+"labels": (string)[],
 "listing_price": number | null,
 "location": string | null,
 "mileage_km": number | null,
@@ -337,6 +376,7 @@ isOneToOne: false
 "notes": string | null,
 "sale_price": number | null,
 "sold_at": string | null,
+"stage_id": string | null,
 "status": Database["public"]['Enums']["vehicle_status"],
 "trim_level": string | null,
 "updated_at": string,
@@ -366,14 +406,60 @@ isOneToOne: false
 "is_admin":
 { Args: Record<PropertyKey, never>; Returns: boolean
                            },
+"move_vehicle_stage":
+{ Args: { "p_event_at"?: string,"p_note"?: string,"p_stage_id": string,"p_vehicle_id": string }; Returns: {
+              "acquisition_price": number | null,
+"archived_at": string | null,
+"arrival_at": string | null,
+"brand": string | null,
+"chassis_normalized": string | null,
+"chassis_number": string,
+"chassis_verified": boolean,
+"company_id": string,
+"created_at": string,
+"created_by": string | null,
+"delivered_at": string | null,
+"doc_settings": NonNullable<Json>,
+"exterior_color": string | null,
+"id": string,
+"interior_color": string | null,
+"labels": (string)[],
+"listing_price": number | null,
+"location": string | null,
+"mileage_km": number | null,
+"model": string | null,
+"notes": string | null,
+"sale_price": number | null,
+"sold_at": string | null,
+"stage_id": string | null,
+"status": Database["public"]['Enums']["vehicle_status"],
+"trim_level": string | null,
+"updated_at": string,
+"year": number | null
+            }
+                          SetofOptions: {
+        from: "*"
+        to: "vehicles"
+        isOneToOne: true
+        isSetofReturn: false
+      } },
 "norm_label":
 { Args: { "t": string }; Returns: string
                            },
 "normalize_chassis":
 { Args: { "raw": string }; Returns: string
                            },
+"reorder_images":
+{ Args: { "p_ids": (string)[],"p_vehicle_id": string }; Returns: undefined
+                           },
 "save_vehicle_import":
 { Args: { "p_documents"?: Json,"p_fields": Json,"p_images"?: Json,"p_specs"?: Json,"p_vehicle_id": string }; Returns: string
+                           },
+"seed_default_stages":
+{ Args: { "p_company": string }; Returns: undefined
+                           },
+"set_cover_image":
+{ Args: { "p_image_id": string }; Returns: undefined
                            },
 "set_information_card":
 { Args: { "p_file_size": number,"p_mime_type": string,"p_original_filename": string,"p_storage_path": string,"p_thumbnail_path"?: string,"p_vehicle_id": string }; Returns: {
@@ -384,8 +470,10 @@ isOneToOne: false
 "file_size": number,
 "id": string,
 "image_type": Database["public"]['Enums']["image_type"],
+"is_cover": boolean,
 "mime_type": string,
 "original_filename": string,
+"sort_order": number | null,
 "storage_path": string,
 "superseded_at": string | null,
 "thumbnail_path": string | null,
@@ -404,7 +492,7 @@ isOneToOne: false
                            }
           }
           Enums: {
-            "accessory_type": "physical_key"|"smart_key"|"nfc_card"|"charger"|"other","app_role": "admin"|"secretary"|"staff"|"viewer","document_type": "vehicle_pdf"|"registration"|"inspection"|"purchase"|"other"|"brochure","expense_category": "mechanical"|"electrical"|"bodywork"|"paint"|"tires"|"maintenance"|"transportation"|"accessories"|"other","image_type": "arrival"|"current"|"garage"|"information_card"|"other","item_status": "present"|"missing"|"unknown","job_status": "pending"|"processing"|"needs_review"|"verified"|"failed","vehicle_status": "in_stock"|"in_garage"|"reserved"|"sold"|"delivered","verification_status": "unverified"|"verified"
+            "accessory_type": "physical_key"|"smart_key"|"nfc_card"|"charger"|"other"|"charging_cable"|"floor_mats"|"owners_manual"|"warning_triangle","app_role": "admin"|"secretary"|"staff"|"viewer","document_type": "vehicle_pdf"|"registration"|"inspection"|"purchase"|"other"|"brochure","expense_category": "mechanical"|"electrical"|"bodywork"|"paint"|"tires"|"maintenance"|"transportation"|"accessories"|"other"|"garage"|"rta"|"detailing"|"tinting"|"parts","image_type": "arrival"|"current"|"garage"|"information_card"|"other","item_status": "present"|"missing"|"unknown","job_status": "pending"|"processing"|"needs_review"|"verified"|"failed","vehicle_status": "in_stock"|"in_garage"|"reserved"|"sold"|"delivered","verification_status": "unverified"|"verified"
           }
           CompositeTypes: {
             [_ in never]: never
@@ -520,7 +608,7 @@ export type CompositeTypes<
 export const Constants = {
   "public": {
           Enums: {
-            "accessory_type": ["physical_key", "smart_key", "nfc_card", "charger", "other"],"app_role": ["admin", "secretary", "staff", "viewer"],"document_type": ["vehicle_pdf", "registration", "inspection", "purchase", "other", "brochure"],"expense_category": ["mechanical", "electrical", "bodywork", "paint", "tires", "maintenance", "transportation", "accessories", "other"],"image_type": ["arrival", "current", "garage", "information_card", "other"],"item_status": ["present", "missing", "unknown"],"job_status": ["pending", "processing", "needs_review", "verified", "failed"],"vehicle_status": ["in_stock", "in_garage", "reserved", "sold", "delivered"],"verification_status": ["unverified", "verified"]
+            "accessory_type": ["physical_key", "smart_key", "nfc_card", "charger", "other", "charging_cable", "floor_mats", "owners_manual", "warning_triangle"],"app_role": ["admin", "secretary", "staff", "viewer"],"document_type": ["vehicle_pdf", "registration", "inspection", "purchase", "other", "brochure"],"expense_category": ["mechanical", "electrical", "bodywork", "paint", "tires", "maintenance", "transportation", "accessories", "other", "garage", "rta", "detailing", "tinting", "parts"],"image_type": ["arrival", "current", "garage", "information_card", "other"],"item_status": ["present", "missing", "unknown"],"job_status": ["pending", "processing", "needs_review", "verified", "failed"],"vehicle_status": ["in_stock", "in_garage", "reserved", "sold", "delivered"],"verification_status": ["unverified", "verified"]
           }
         }
 } as const

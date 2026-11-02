@@ -1,7 +1,8 @@
-import { CarFront, FileText, LayoutGrid, LogOut, Menu, Plus, Receipt, Settings, Upload, Users, X } from 'lucide-react'
+import { CarFront, FileText, LogOut, Menu, Receipt, Settings, Upload, Users, X } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet } from 'react-router-dom'
+import { useRealtimeSync } from '@/api/journey'
 import { LOCALES } from '@/i18n'
 import { useCompany } from '@/lib/auth'
 import { cn } from '@/lib/cn'
@@ -13,15 +14,14 @@ import { GlobalSearch } from './GlobalSearch'
 import { buttonVariants } from './ui/button'
 
 const NAV = [
-  { to: '/', key: 'dashboard', icon: LayoutGrid, end: true },
-  { to: '/vehicles', key: 'vehicles', icon: CarFront },
-  { to: '/documents', key: 'documents', icon: FileText },
+  { to: '/vehicles', key: 'cars', icon: CarFront },
   { to: '/expenses', key: 'expenses', icon: Receipt },
-  { to: '/import', key: 'import', icon: Upload },
+  { to: '/documents', key: 'documents', icon: FileText },
 ] as const
 const ADMIN_NAV = [
-  { to: '/staff', key: 'staff', icon: Users },
   { to: '/settings', key: 'settings', icon: Settings },
+  { to: '/staff', key: 'staff', icon: Users },
+  { to: '/import', key: 'import', icon: Upload },
 ] as const
 
 /** The company's own logo, picking the dark-background version when the sidebar is dark. */
@@ -46,10 +46,8 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const { i18n } = useTranslation()
   const link = ({ isActive }: { isActive: boolean }) =>
     cn(
-      'relative flex h-10 items-center gap-3 rounded-md px-3 text-[14px] transition-colors [&_svg]:size-[18px]',
-      isActive
-        ? 'bg-chrome-hover font-medium text-chrome-ink before:absolute before:inset-y-2 before:start-0 before:w-[3px] before:rounded-full before:bg-accent'
-        : 'text-chrome-ink-2 hover:bg-chrome-hover hover:text-chrome-ink',
+      'flex h-11 items-center gap-3 rounded-[10px] px-3 text-[15px] font-medium transition-colors [&_svg]:size-[18px]',
+      isActive ? 'bg-ink text-white' : 'text-chrome-ink-2 hover:bg-chrome-hover hover:text-chrome-ink',
     )
   return (
     <div className="flex h-full flex-col">
@@ -57,8 +55,8 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <CompanyLogo className="max-w-[200px]" />
       </div>
       <nav className="flex flex-1 flex-col gap-0.5 px-3 py-2" aria-label={t('nav.main')}>
-        {NAV.map(({ to, key, icon: Icon, ...rest }) => (
-          <NavLink key={to} to={to} end={'end' in rest} className={link} onClick={onNavigate}>
+        {NAV.map(({ to, key, icon: Icon }) => (
+          <NavLink key={to} to={to} className={link} onClick={onNavigate}>
             <Icon aria-hidden /> {t(`nav.${key}`)}
           </NavLink>
         ))}
@@ -115,11 +113,12 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 export function AppShell() {
   const { t } = useTranslation()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const { canWrite } = useCompany()
+  const { profile } = useCompany()
+  useRealtimeSync()
 
   return (
-    <div className="min-h-dvh lg:ps-64">
-      <aside className="fixed inset-y-0 start-0 z-20 hidden w-64 border-e border-chrome-line bg-chrome lg:block">
+    <div className="min-h-dvh lg:ps-[232px]">
+      <aside className="fixed inset-y-0 start-0 z-20 hidden w-[232px] border-e border-chrome-line bg-chrome lg:block">
         <Sidebar />
       </aside>
       {mobileOpen && (
@@ -137,18 +136,17 @@ export function AppShell() {
           </aside>
         </div>
       )}
-      <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-line-soft bg-surface px-4 sm:px-6">
+      <header className="sticky top-0 z-10 flex h-[68px] items-center gap-3 border-b border-line bg-bg/90 px-4 backdrop-blur sm:px-8">
         <button className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'lg:hidden')} onClick={() => setMobileOpen(true)} aria-label={t('nav.openMenu')}>
           <Menu />
         </button>
-        <GlobalSearch className="max-w-xl flex-1" />
-        {canWrite && (
-          <Link to="/vehicles/new" className={cn(buttonVariants({ variant: 'primary' }), 'ms-auto')}>
-            <Plus aria-hidden /> <span className="hidden sm:inline">{t('actions.addVehicle')}</span>
-          </Link>
-        )}
+        <GlobalSearch className="max-w-[520px] flex-1" />
+        <span className="ms-auto hidden items-center gap-2.5 text-[14px] text-ink-2 sm:flex">
+          <span className="flex size-8 items-center justify-center rounded-full bg-hover text-[13px] font-semibold">{(profile.full_name || '?').trim()[0]?.toUpperCase()}</span>
+          {profile.full_name || t('terms.staffMember')} · {ROLE_LABEL[profile.role]}
+        </span>
       </header>
-      <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:py-8">
+      <main className="mx-auto max-w-[1300px] px-4 pt-6 pb-16 sm:px-8 lg:pt-7">
         <Outlet />
       </main>
     </div>

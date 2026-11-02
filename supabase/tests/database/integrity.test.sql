@@ -77,8 +77,10 @@ select is((select sold_at from public.vehicles where id = 'a0000000-0000-0000-00
 select is((select description from public.vehicle_events
            where vehicle_id = 'a0000000-0000-0000-0000-00000000000a' and event_type = 'status_change'),
   'Sold to walk-in customer', 'status change event keeps the note');
+reset role; -- the edit log is admins-only; check it as the database
 select ok(exists(select 1 from public.audit_logs where entity_id = 'a0000000-0000-0000-0000-00000000000a' and action = 'update'),
   'status change is in the audit log');
+select pg_temp.login('aaaaaaaa-0000-0000-0000-000000000001');
 
 -- Storage: own company path allowed, other company path refused
 select lives_ok($$ insert into storage.objects (bucket_id, name, owner)

@@ -177,6 +177,24 @@ Protection: seeds, bootstrap, verify scripts and the Playwright config refuse pi
 pilot always asks you to type its name. Never run `supabase db reset` or `supabase stop --no-backup`
 in `pilot/`.
 
+## Rebuild v3 (manual-first)
+
+The design target is `rebuild-v3/` (clickable prototype + brief). The app is built around the car's
+journey, not documents:
+
+- **Cars** (`/vehicles`): chassis first, stage filter chips with counts, attention tags; one "Add car".
+- **Add car**: 5 steps — chassis (17 characters, I/O/Q warning, duplicate check), car, arrival
+  (creates the car at the first stage), photos (camera or upload, skippable), done.
+- **Car page**: chassis hero with copy and free labels; "Where is this car?" journey track; tabs
+  Specs (inline editing, Enter = next field, Arabic only where the brochure prints it), Photos
+  (cover star, order), Accessories (quantity → Present/Missing), Expenses (one-tap chips),
+  Journey (every stage move: date, who, note), Documents. Admin-only in ⋯: edit log, import, delete.
+- **Stages** are a per-company list in Settings (name EN/AR, colour, order, what it counts as);
+  cars can skip stages. Moves go through `move_vehicle_stage`.
+- **Realtime**: `[realtime] enabled = true` in both configs; the app subscribes once
+  (`useRealtimeSync`) and refreshes whatever shows the changed car.
+- Lottie animations in `web/public/lottie/` are original (see `LICENSES.md`).
+
 ## Deploying (private web app)
 
 1. Create a Supabase project (region: closest to UAE, e.g. `ap-south-1` Mumbai / `eu-central-1`).

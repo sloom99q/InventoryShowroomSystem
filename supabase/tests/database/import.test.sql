@@ -52,6 +52,7 @@ select is((select sale_price from public.vehicles where id = (select id from res
 select is((select count(*)::int from public.vehicle_specs where vehicle_id = (select id from result)), 2, 'all specifications saved');
 select ok((select bool_and(source_document_id = (select d.id from public.documents d where d.vehicle_id = (select id from result)))
            from public.vehicle_specs where vehicle_id = (select id from result)), 'specs link to their source document');
+reset role; -- the edit log is admins-only; check it as the database
 select ok(exists(select 1 from public.audit_logs where entity_type = 'vehicle_specs'), 'spec inserts are audited');
 
 select pg_temp.login('aaaaaaaa-0000-0000-0000-000000000002');

@@ -12,7 +12,7 @@ const row = (p: Partial<SpecRow>): SpecRow => ({
 })
 const img = (p: Partial<Img>): Img => ({
   id: `i${++n}`, company_id: 'c', vehicle_id: 'v', image_type: 'arrival', storage_path: `p${n}.jpg`, thumbnail_path: null, original_filename: `photo${n}.jpg`,
-  mime_type: 'image/jpeg', file_size: 1, caption: null, captured_at: null, superseded_at: null, deleted_at: null, uploaded_by: null, uploaded_at: '', ...p,
+  mime_type: 'image/jpeg', file_size: 1, caption: null, captured_at: null, superseded_at: null, deleted_at: null, uploaded_by: null, uploaded_at: '', sort_order: null, is_cover: false, ...p,
 })
 
 /** The sample car as the database would hold it. */

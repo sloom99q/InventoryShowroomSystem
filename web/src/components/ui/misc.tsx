@@ -16,7 +16,7 @@ export function PageLoader() {
 }
 
 export function Panel({ className, ...props }: ComponentProps<'section'>) {
-  return <section className={cn('rounded-lg border border-line-soft bg-surface', className)} {...props} />
+  return <section className={cn('card', className)} {...props} />
 }
 
 export function PanelHeader({ title, children, className }: { title: ReactNode; children?: ReactNode; className?: string }) {

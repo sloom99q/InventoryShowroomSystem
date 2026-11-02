@@ -8,7 +8,7 @@ const files = ['a-brochure-bilingual.pdf', 'b-spec-table.pdf', 'c-summary.docx',
 test('imports four mixed-format files into a car (admin), with conflicts, Arabic and photos', async ({ page }) => {
   await login(page)
   const carUrl = await addCarByHand(page)
-  await page.getByRole('button', { name: 'More' }).click()
+  await page.getByRole('button', { name: 'More actions' }).click()
   await page.getByRole('menuitem', { name: 'Import from file…' }).click()
   await page.locator('input[type=file][multiple][accept*=".docx"]').setInputFiles([...files, path.join(FX, 'notes.txt.fake')].filter((f) => !f.endsWith('.fake')))
 
