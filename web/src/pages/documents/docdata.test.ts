@@ -8,7 +8,7 @@ const sample = JSON.parse(readFileSync(new URL('../../../../kit/sample/sample-da
 let n = 0
 const row = (p: Partial<SpecRow>): SpecRow => ({
   id: `r${++n}`, company_id: 'c', vehicle_id: 'v', field_key: null, position: null, section: null, label: 'x', label_alt: null, value_en: null, value_ar: null,
-  unit: null, source_document_id: null, source_page: null, verified: true, copied_from_vehicle_id: null, sort_order: n, created_at: '', updated_at: '', ...p,
+  unit: null, source_document_id: null, source_page: null, verified: true, sort_order: n, created_at: '', updated_at: '', ...p,
 })
 const img = (p: Partial<Img>): Img => ({
   id: `i${++n}`, company_id: 'c', vehicle_id: 'v', image_type: 'arrival', storage_path: `p${n}.jpg`, thumbnail_path: null, original_filename: `photo${n}.jpg`,

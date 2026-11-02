@@ -1,19 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { lazy, Suspense, useState } from 'react'
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { FileStack, Keyboard } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useCreateVehicle } from '@/api/vehicles'
 import { ChassisInput, useChassisBlocked } from '@/components/ChassisInput'
 import { PhotoPicker } from '@/components/PhotoPicker'
 import { Button } from '@/components/ui/button'
 import { Field, Input, Select } from '@/components/ui/form'
-import { PageLoader, Panel } from '@/components/ui/misc'
-import { cn } from '@/lib/cn'
+import { Panel } from '@/components/ui/misc'
 
-const ImportFiles = lazy(() => import('@/pages/import/ImportFiles'))
 import { fromForm, VehicleFields, vehicleSchema, type VehicleForm } from '@/components/VehicleFields'
 import { useCompany } from '@/lib/auth'
 import { nowLocalInput } from '@/lib/format'
@@ -167,37 +164,13 @@ export function ManualVehicleForm() {
   )
 }
 
-/** "Add vehicle": read it from the car's documents, or type it in. */
+/** "Add vehicle": typed in by hand (pilot feedback: importing from documents confused more than it helped). */
 export function VehicleNew() {
   const { t } = useTranslation('add')
-  const [params, setParams] = useSearchParams()
-  const mode = params.get('mode') === 'documents' ? 'documents' : 'manual'
-  const options = [
-    { value: 'manual', icon: Keyboard, title: t('mode.manual'), hint: t('mode.manualHint') },
-    { value: 'documents', icon: FileStack, title: t('mode.documents'), hint: t('mode.documentsHint') },
-  ] as const
   return (
     <>
       <h1 className="mb-4 text-[24px] font-semibold">{t('title')}</h1>
-      <div role="tablist" aria-label={t('title')} className="mb-6 grid gap-3 sm:grid-cols-2">
-        {options.map((o) => (
-          <button key={o.value} role="tab" aria-selected={mode === o.value}
-            onClick={() => setParams(o.value === 'documents' ? { mode: 'documents' } : {}, { replace: true })}
-            className={cn('flex cursor-pointer items-start gap-3 rounded-lg border bg-surface p-4 text-start transition-colors',
-              mode === o.value ? 'border-accent ring-1 ring-accent' : 'border-line-soft hover:border-line')}>
-            <span className={cn('flex size-10 shrink-0 items-center justify-center rounded-md', mode === o.value ? 'bg-accent text-accent-ink' : 'bg-raised text-ink-2')}>
-              <o.icon className="size-5" aria-hidden />
-            </span>
-            <span>
-              <span className="block text-[15px] font-semibold">{o.title}</span>
-              <span className="mt-0.5 block text-[13px] text-ink-2">{o.hint}</span>
-            </span>
-          </button>
-        ))}
-      </div>
-      {mode === 'manual' ? <ManualVehicleForm /> : (
-        <Suspense fallback={<PageLoader />}><ImportFiles embedded /></Suspense>
-      )}
+      <ManualVehicleForm />
     </>
   )
 }

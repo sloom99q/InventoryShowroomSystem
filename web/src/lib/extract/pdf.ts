@@ -185,17 +185,72 @@ function drawImage(img: PdfImage): OffscreenCanvas | HTMLCanvasElement | null {
   return c
 }
 
+type Box = { x0: number; y0: number; x1: number; y1: number }
+type Painted = { img: PdfImage; id: string | null; box: Box; order: number }
+type M = [number, number, number, number, number, number]
+const mul = (m: M, n: M): M => [
+  n[0] * m[0] + n[1] * m[2], n[0] * m[1] + n[1] * m[3],
+  n[2] * m[0] + n[3] * m[2], n[2] * m[1] + n[3] * m[3],
+  n[4] * m[0] + n[5] * m[2] + m[4], n[4] * m[1] + n[5] * m[3] + m[5],
+]
+const area = (b: Box) => Math.max(0, b.x1 - b.x0) * Math.max(0, b.y1 - b.y0)
+const overlap = (a: Box, b: Box) => area({ x0: Math.max(a.x0, b.x0), y0: Math.max(a.y0, b.y0), x1: Math.min(a.x1, b.x1), y1: Math.min(a.y1, b.y1) })
+
 /**
- * Candidate photos from a PDF: embedded pictures at their original
+ * The large pictures a page paints, in paint order, with where they land on the page.
+ * Pictures hidden under a later one are left out: a slide deck re-used from another car
+ * keeps the old car's photo underneath the new one (an XPeng brochure carried BYD Seal
+ * photos that way). Only what the page shows may be offered.
+ */
+async function visiblePictures(page: Awaited<ReturnType<PdfDoc['getPage']>>, pdfjs: PdfJs): Promise<Painted[]> {
+  const OPS = pdfjs.OPS
+  const ops = await page.getOperatorList()
+  const painted: Painted[] = []
+  let ctm: M = [1, 0, 0, 1, 0, 0]
+  const stack: M[] = []
+  for (let i = 0; i < ops.fnArray.length; i++) {
+    const fn = ops.fnArray[i]
+    const args = ops.argsArray[i]
+    if (fn === OPS.save) stack.push(ctm)
+    else if (fn === OPS.restore) ctm = stack.pop() ?? ctm
+    else if (fn === OPS.transform) ctm = mul(ctm, args as M)
+    else if (fn === OPS.paintFormXObjectBegin) { stack.push(ctm); if (Array.isArray(args[0])) ctm = mul(ctm, args[0] as M) }
+    else if (fn === OPS.paintFormXObjectEnd) ctm = stack.pop() ?? ctm
+    else if (fn === OPS.paintImageXObject || fn === OPS.paintInlineImageXObject) {
+      const arg = args[0]
+      let img: PdfImage | null = null
+      let id: string | null = null
+      if (typeof arg === 'string') {
+        id = arg
+        const objs = arg.startsWith('g_') ? page.commonObjs : page.objs
+        img = await new Promise<PdfImage | null>((res) => {
+          try { objs.get(arg, (o: PdfImage) => res(o)) } catch { res(null) }
+        })
+      } else img = arg as PdfImage
+      if (!img || img.width < MIN_SIDE || img.height < MIN_SIDE || img.width * img.height < MIN_AREA) continue
+      // An image fills the unit square under the current matrix.
+      const xs = [ctm[4], ctm[0] + ctm[4], ctm[2] + ctm[4], ctm[0] + ctm[2] + ctm[4]]
+      const ys = [ctm[5], ctm[1] + ctm[5], ctm[3] + ctm[5], ctm[1] + ctm[3] + ctm[5]]
+      painted.push({ img, id, order: painted.length, box: { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) } })
+    }
+  }
+  return painted.filter((p) => {
+    const a = area(p.box)
+    return !painted.some((q) => q.order > p.order && a > 0 && overlap(p.box, q.box) / a > 0.9)
+  })
+}
+
+/**
+ * Candidate photos from a PDF: the visible embedded pictures at their original
  * resolution, and a rendered image of text-less pages that hold no large
- * embedded picture. Logos and icons (small images) are skipped.
+ * picture. Logos and icons (small images) are skipped.
  */
 export async function pdfImageCandidates(
   data: Uint8Array,
   pdfjs: PdfJs,
   fileKey: string,
   imageOnlyPages: number[] = [],
-  /** Only these pages, one picture each (the largest), e.g. a brochure's cover + photo pages. */
+  /** Only these pages, one picture each, e.g. a brochure's cover + photo pages. */
   photoPages: number[] | null = null,
   coverPage: number | null = null,
 ): Promise<ImageCandidate[]> {
@@ -203,33 +258,32 @@ export async function pdfImageCandidates(
   const doc = await task.promise
   const out: ImageCandidate[] = []
   const seen = new Set<string>()
+  const render = async (page: Awaited<ReturnType<PdfDoc['getPage']>>, p: number, role?: 'cover' | 'photo') => {
+    const base = page.getViewport({ scale: 1 })
+    const viewport = page.getViewport({ scale: 1600 / base.width })
+    const c = canvasOf(Math.round(viewport.width), Math.round(viewport.height))
+    await page.render({ canvas: c as HTMLCanvasElement, viewport }).promise
+    out.push({ id: `${fileKey}:p${p}:page`, fileKey, page: p, blob: await toBlob(c), width: c.width, height: c.height, origin: 'page', role })
+  }
   try {
     for (let p = 1; p <= doc.numPages; p++) {
       if (photoPages && !photoPages.includes(p)) continue
       const role = photoPages ? (p === coverPage ? 'cover' as const : 'photo' as const) : undefined
       const page = await doc.getPage(p)
-      const ops = await page.getOperatorList()
-      let bigOnPage = false
-      let best: { img: PdfImage; id: string | null } | null = null
-      for (let i = 0; i < ops.fnArray.length; i++) {
-        const fn = ops.fnArray[i]
-        if (fn !== pdfjs.OPS.paintImageXObject && fn !== pdfjs.OPS.paintInlineImageXObject) continue
-        const arg = ops.argsArray[i][0]
-        let img: PdfImage | null = null
-        let id: string | null = null
-        if (typeof arg === 'string') {
-          id = arg
-          const objs = arg.startsWith('g_') ? page.commonObjs : page.objs
-          img = await new Promise<PdfImage | null>((res) => {
-            try { objs.get(arg, (o: PdfImage) => res(o)) } catch { res(null) }
-          })
-        } else img = arg as PdfImage
-        if (!img || img.width < MIN_SIDE || img.height < MIN_SIDE || img.width * img.height < MIN_AREA) continue
-        bigOnPage = true
-        if (photoPages) {
-          if (!best || img.width * img.height > best.img.width * best.img.height) best = { img, id }
-          continue
+      const pics = await visiblePictures(page, pdfjs)
+      if (photoPages) {
+        // One picture per photo page: the topmost one if it fills the page, else the page as it looks.
+        const [px0, py0, px1, py1] = page.view
+        const pageBox = { x0: px0, y0: py0, x1: px1, y1: py1 }
+        const top = pics.at(-1)
+        if (top && overlap(top.box, pageBox) / area(pageBox) > 0.85) {
+          const canvas = drawImage(top.img)
+          if (canvas) { out.push({ id: `${fileKey}:p${p}:0`, fileKey, page: p, blob: await toBlob(canvas), width: top.img.width, height: top.img.height, origin: 'embedded', role }); continue }
         }
+        if (pics.length || p !== coverPage) await render(page, p, role)
+        continue
+      }
+      for (const { img, id } of pics) {
         const key = `${id ?? 'inline'}:${img.width}x${img.height}`
         if (id && seen.has(key)) continue
         seen.add(key)
@@ -237,18 +291,7 @@ export async function pdfImageCandidates(
         if (!canvas) continue
         out.push({ id: `${fileKey}:p${p}:${out.length}`, fileKey, page: p, blob: await toBlob(canvas), width: img.width, height: img.height, origin: 'embedded' })
       }
-      if (best) {
-        const canvas = drawImage(best.img)
-        if (canvas) out.push({ id: `${fileKey}:p${p}:0`, fileKey, page: p, blob: await toBlob(canvas), width: best.img.width, height: best.img.height, origin: 'embedded', role })
-        continue
-      }
-      if (!bigOnPage && (imageOnlyPages.includes(p) || (photoPages && p !== coverPage))) {
-        const base = page.getViewport({ scale: 1 })
-        const viewport = page.getViewport({ scale: 1600 / base.width })
-        const c = canvasOf(Math.round(viewport.width), Math.round(viewport.height))
-        await page.render({ canvas: c as HTMLCanvasElement, viewport }).promise
-        out.push({ id: `${fileKey}:p${p}:page`, fileKey, page: p, blob: await toBlob(c), width: c.width, height: c.height, origin: 'page', role })
-      }
+      if (!pics.length && imageOnlyPages.includes(p)) await render(page, p)
     }
   } finally {
     await task.destroy()

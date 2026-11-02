@@ -62,7 +62,7 @@ export async function detectKind(file: Blob & { name?: string }): Promise<{ kind
 }
 
 let pdfjsPromise: Promise<PdfJs> | null = null
-function loadPdfjs(): Promise<PdfJs> {
+export function loadPdfjs(): Promise<PdfJs> {
   pdfjsPromise ??= Promise.all([import('pdfjs-dist'), import('pdfjs-dist/build/pdf.worker.min.mjs?url')]).then(([pdfjs, worker]) => {
     pdfjs.GlobalWorkerOptions.workerSrc = worker.default
     return pdfjs

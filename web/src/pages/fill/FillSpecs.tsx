@@ -1,7 +1,7 @@
 // "Fill specs": every field of a car on one page (pilot feedback), with
-// "Copy from a previous car", "Paste specs" and a live spec sheet preview.
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ClipboardPaste, Copy, Loader2 } from 'lucide-react'
+// "Paste specs" and a live spec sheet preview.
+import { useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, ClipboardPaste, Loader2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
@@ -65,7 +65,6 @@ export default function FillSpecs() {
         </div>
         {canWrite && (
           <div className="ms-auto flex flex-wrap gap-2">
-            <CopyFromPrevious vehicle={v} data={data.data} />
             <Button onClick={() => setPaste(true)}><ClipboardPaste />{t('fill.paste')}</Button>
           </div>
         )}
@@ -125,88 +124,6 @@ function SpecPreview({ vehicle, data }: { vehicle: VehicleOverview; data: Vehicl
       {img ? <img src={img} alt={t('fill.preview')} className={cn('w-full bg-white transition-opacity', busy && 'opacity-70')} />
         : <div className="flex aspect-[595/842] items-center justify-center text-ink-3"><Loader2 className="size-5 animate-spin" /></div>}
     </Panel>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Copy from a previous car
-// ---------------------------------------------------------------------------
-
-function CopyFromPrevious({ vehicle, data }: { vehicle: VehicleOverview; data: VehicleData }) {
-  const { t } = useTranslation(['vehicle', 'common'])
-  const qc = useQueryClient()
-  const [open, setOpen] = useState(false)
-  const [pick, setPick] = useState<string | null>(null)
-  const ready = !!vehicle.brand?.trim() && !!vehicle.model?.trim()
-  const like = (s: string) => s.trim().replace(/[\\%_]/g, (c) => `\\${c}`)
-
-  const cars = useQuery({
-    queryKey: ['copy-candidates', vehicle.id, vehicle.brand, vehicle.model],
-    enabled: ready,
-    queryFn: async () => {
-      const { data: rows, error } = await supabase.from('vehicles')
-        .select('id, brand, model, year, trim_level, chassis_number, status, archived_at, arrival_at')
-        .ilike('brand', like(vehicle.brand!)).ilike('model', like(vehicle.model!)).neq('id', vehicle.id!)
-      if (error) throw error
-      const ids = rows.map((r) => r.id)
-      const counts = new Map<string, number>()
-      if (ids.length) {
-        const { data: specs } = await supabase.from('vehicle_specs').select('vehicle_id').in('vehicle_id', ids).not('field_key', 'is', null)
-        for (const s of specs ?? []) counts.set(s.vehicle_id, (counts.get(s.vehicle_id) ?? 0) + 1)
-      }
-      // Same year first, then newest, then the most complete.
-      return rows.map((r) => ({ ...r, specs: counts.get(r.id) ?? 0 }))
-        .filter((r) => r.specs > 0)
-        .sort((a, b) => Number(b.year === vehicle.year) - Number(a.year === vehicle.year) || (b.year ?? 0) - (a.year ?? 0) || b.specs - a.specs)
-    },
-  })
-
-  const copy = useMutation({
-    mutationFn: async (source: string) => {
-      const { data: res, error } = await supabase.rpc('copy_specs_from', { p_target: vehicle.id!, p_source: source })
-      if (error) throw error
-      return res as { fields: number; items: number; kept: number }
-    },
-    onSuccess: (res) => {
-      qc.invalidateQueries({ queryKey: ['specs', vehicle.id] })
-      toast.success(t('fill.copied', { fields: res.fields, items: res.items }) + (res.kept ? ` ${t('fill.copiedKept', { count: res.kept })}` : ''))
-      setOpen(false)
-      setPick(null)
-    },
-    onError: (e) => toast.error(friendlyError(e)),
-  })
-
-  const filled = data.fields.size + Object.values(data.lists).reduce((n, l) => n + l.length, 0)
-  const n = cars.data?.length ?? 0
-  return (
-    <>
-      <Button onClick={() => setOpen(true)} disabled={!ready || !n} title={!ready ? t('fill.copyNeedsModel') : !n ? t('fill.copyNone') : undefined}>
-        <Copy />{t('fill.copy')}{ready && n > 0 && <span className="tnum rounded-sm bg-raised px-1.5 text-[11.5px]">{n}</span>}
-      </Button>
-      <Dialog open={open} onClose={() => { setOpen(false); setPick(null) }} title={t('fill.copyTitle', { name: `${vehicle.brand} ${vehicle.model}` })} size="lg"
-        description={t('fill.copyHint')}
-        footer={<>
-          <Button variant="ghost" onClick={() => { setOpen(false); setPick(null) }}>{t('common:actions.cancel')}</Button>
-          <Button variant="primary" disabled={!pick} loading={copy.isPending} onClick={() => pick && copy.mutate(pick)}><Copy />{t('fill.copyGo')}</Button>
-        </>}>
-        {filled > 0 && <p className="mb-3 rounded-md bg-info/10 px-3 py-2 text-[12.5px] text-info">{t('fill.copyOnlyEmpty')}</p>}
-        <ul className="space-y-1.5" role="radiogroup" aria-label={t('fill.copyTitle', { name: '' })}>
-          {(cars.data ?? []).map((c) => (
-            <li key={c.id}>
-              <label className={cn('flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2.5 text-[13.5px]', pick === c.id ? 'border-ink-2 bg-raised' : 'border-line-soft hover:bg-raised')} data-copy-source={c.id}>
-                <input type="radio" name="copy-source" checked={pick === c.id} onChange={() => setPick(c.id)} />
-                <span className="min-w-0 flex-1">
-                  <span className="block font-medium">{c.year ?? '—'} · {c.trim_level || t('fill.noTrim')}</span>
-                  <span className="block text-[12px] text-ink-3"><span className="vin" dir="ltr">{c.chassis_number}</span> · {t('fill.specCount', { count: c.specs })}</span>
-                </span>
-                <StatusBadge status={c.status} />
-                {c.archived_at && <span className="text-[11.5px] text-ink-3">{t('fill.archived')}</span>}
-              </label>
-            </li>
-          ))}
-        </ul>
-      </Dialog>
-    </>
   )
 }
 

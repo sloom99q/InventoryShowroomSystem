@@ -3,7 +3,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
-import { login } from './helpers'
+import { addCarByHand, login } from './helpers'
 
 const KIT = path.resolve(import.meta.dirname, '../../kit')
 
@@ -90,7 +90,9 @@ test('round trip: export the sample car, import both exports → identical field
 test('importing the real brochure offers its cover and all 17 photo pages, pre-selected', async ({ page }) => {
   test.setTimeout(180_000)
   await login(page)
-  await page.goto('/vehicles/new?mode=documents')
+  await addCarByHand(page)
+  await page.getByRole('button', { name: 'More' }).click()
+  await page.getByRole('menuitem', { name: 'Import from file…' }).click()
   await expect(page.getByText('Drop files here, or click to choose')).toBeVisible()
   await page.locator('input[type=file][multiple][accept*=".docx"]').setInputFiles(path.join(KIT, 'real-fixtures/VOYAH_FREE.pdf'))
   const photos = page.locator('[data-photo]')

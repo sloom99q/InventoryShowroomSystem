@@ -1,18 +1,17 @@
 // The whole field catalogue as one compact table: label | English | Arabic.
 // mode "edit" (Fill specs page): every cell saves itself on Enter/leave, Enter
 // jumps to the next cell, empty cells are tinted. mode "read" (Specifications tab).
-import { ArrowDown, ArrowUp, Check, Copy, Loader2, Trash2 } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import { ArrowDown, ArrowUp, Check, Loader2, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { type SpecRow, useFieldWriter, type VehicleData } from '@/api/fields'
+import { useFieldWriter, type VehicleData } from '@/api/fields'
 import { useUpdateVehicle } from '@/api/vehicles'
 import { cn } from '@/lib/cn'
 import { type FieldDef, FIELDS, type SectionDef } from '@/lib/fields'
 import { arabicFor, printsArabic } from '@/lib/fields/arabic'
 import { fmtMoney, parseAmount } from '@/lib/format'
-import { friendlyError, supabase } from '@/lib/supabase'
+import { friendlyError } from '@/lib/supabase'
 import type { VehicleOverview } from '@/lib/types'
 
 type Mode = 'edit' | 'read'
@@ -112,41 +111,17 @@ type Props = {
   mode: Mode
 }
 
-/** Short names of the cars values were copied from ("copied from …"). */
-function useCopySources(data: VehicleData) {
-  const ids = [...new Set([...data.fields.values(), ...Object.values(data.lists).flat()].map((r) => r.copied_from_vehicle_id).filter(Boolean) as string[])].sort()
-  return useQuery({
-    queryKey: ['copy-sources', ids],
-    enabled: ids.length > 0,
-    queryFn: async () => {
-      const { data: rows, error } = await supabase.from('vehicles').select('id, year, trim_level, chassis_number').in('id', ids)
-      if (error) throw error
-      return new Map(rows.map((v) => [v.id, `${[v.year, v.trim_level].filter(Boolean).join(' ')} (…${v.chassis_number.slice(-6)})`]))
-    },
-  }).data
-}
-
 export function SpecTable({ vehicle, data, mode }: Props) {
-  const copiedNames = useCopySources(data)
   const { t } = useTranslation('vehicle')
   const w = useFieldWriter(vehicle.id!)
   const upd = useUpdateVehicle(vehicle.id!)
   const saveCol = (patch: Record<string, unknown>) => upd.mutateAsync(patch as never)
 
-  const copied = (row?: SpecRow) => {
-    if (!row?.copied_from_vehicle_id) return null
-    return (
-      <span className="mt-0.5 inline-flex max-w-full items-start gap-1 rounded-sm bg-info/10 px-1.5 py-px text-[11px] leading-tight text-info" title={t('fill.copiedHint')}>
-        <Copy className="mt-px size-3 shrink-0" /><span>{t('fill.copiedFrom', { name: copiedNames?.get(row.copied_from_vehicle_id) ?? '…' })}</span>
-      </span>
-    )
-  }
-
   const fieldRow = (def: FieldDef, extra?: React.ReactNode) => {
     const row = data.fields.get(def.key)
     return (
       <div key={def.key} className={ROW} id={`fill-${def.key}`} data-field={def.key}>
-        <Label en={def.label_en} ar={def.label_ar}>{copied(row)}{extra}</Label>
+        <Label en={def.label_en} ar={def.label_ar}>{extra}</Label>
         <Cell id={`fill-${def.key}-en`} mode={mode} value={row?.value_en ?? ''} placeholder={def.label_en}
           onSave={(v) => w.setField.mutateAsync({ key: def.key, value: { en: v } })} />
         {printsArabic(def.key) ? (
@@ -166,7 +141,6 @@ export function SpecTable({ vehicle, data, mode }: Props) {
           <div key={it.id} className={cn(ROW, 'sm:grid-cols-[200px_1fr_1fr]')} id={`fill-item-${it.id}`}>
             <div className="flex items-center gap-1 py-1 text-[12.5px] text-ink-3">
               <span className="tnum w-5">{i + 1}.</span>
-              {copied(it)}
               {mode === 'edit' && (
                 <span className="ms-auto flex">
                   <button type="button" className="flex size-6 items-center justify-center rounded-sm hover:bg-raised disabled:opacity-30" disabled={i === 0} aria-label={t('fields.moveUp')}

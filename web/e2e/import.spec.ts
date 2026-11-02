@@ -1,21 +1,20 @@
 import { expect, test } from '@playwright/test'
 import path from 'node:path'
-import { login, randomChassis } from './helpers'
+import { addCarByHand, login } from './helpers'
 
 const FX = path.resolve(import.meta.dirname, 'fixtures')
 const files = ['a-brochure-bilingual.pdf', 'b-spec-table.pdf', 'c-summary.docx', 'd-spec-sheet.xlsx'].map((f) => path.join(FX, f))
 
-test('imports four mixed-format files for one new car, with conflicts, Arabic and photos', async ({ page }) => {
+test('imports four mixed-format files into a car (admin), with conflicts, Arabic and photos', async ({ page }) => {
   await login(page)
-  await page.goto('/vehicles/import')
+  const carUrl = await addCarByHand(page)
+  await page.getByRole('button', { name: 'More' }).click()
+  await page.getByRole('menuitem', { name: 'Import from file…' }).click()
   await page.locator('input[type=file][multiple][accept*=".docx"]').setInputFiles([...files, path.join(FX, 'notes.txt.fake')].filter((f) => !f.endsWith('.fake')))
 
   // Every file is read; nothing is saved yet.
   await expect(page.getByText(/details found/)).toHaveCount(4, { timeout: 30_000 })
   await expect(page.getByRole('button', { name: /Save to vehicle|Create vehicle/ })).toBeDisabled()
-
-  // No chassis in any file and we came from "Add vehicle": it starts as a new vehicle (switchable).
-  await expect(page.getByText('New vehicle').first()).toBeVisible()
 
   // Facts land on the fixed fields; the conflicting range is shown, not resolved.
   const range = page.locator('fieldset[data-field=range]')
@@ -43,11 +42,7 @@ test('imports four mixed-format files for one new car, with conflicts, Arabic an
 
   await page.screenshot({ path: 'e2e/screens/import-review.png', fullPage: true })
 
-  // Resolve: chassis typed by hand, conflict picked, brand/model suggestion accepted.
-  const chassis = randomChassis()
-  const chassisField = page.locator('fieldset[data-field=chassis_number]')
-  await chassisField.getByText('Type a value').click()
-  await chassisField.getByPlaceholder('LVVDB21B9PD012345').fill(chassis)
+  // Resolve: conflict picked, brand/model suggestion accepted.
   for (const f of ['brand', 'model', 'year']) {
     const fs = page.locator(`fieldset[data-field=${f}]`)
     const radios = fs.locator('input[type=radio]:not([disabled])')
@@ -57,10 +52,10 @@ test('imports four mixed-format files for one new car, with conflicts, Arabic an
     if (await fs.getByText('Choose one').isVisible()) await fs.locator('input[type=radio]:not([disabled])').first().check()
   }
 
-  const save = page.getByRole('button', { name: 'Create vehicle and save' })
+  const save = page.getByRole('button', { name: 'Save to vehicle' })
   await expect(save).toBeEnabled()
   await save.click()
-  await page.waitForURL(/\/vehicles\/[0-9a-f-]{36}$/, { timeout: 30_000 }).catch(async () => {
+  await page.waitForURL(new RegExp(`${carUrl.replace(/.*\/vehicles\//, '/vehicles/')}$`), { timeout: 30_000 }).catch(async () => {
     throw new Error('Save failed: ' + (await page.locator('[data-sonner-toast]').allInnerTexts()).join(' | '))
   })
 
@@ -77,7 +72,7 @@ test('imports four mixed-format files for one new car, with conflicts, Arabic an
 
 test('an inventory spreadsheet is routed to bulk import', async ({ page }) => {
   await login(page)
-  await page.goto('/vehicles/import')
+  await page.goto(`${await addCarByHand(page)}/import`)
   await page.locator('input[type=file][multiple][accept*=".docx"]').setInputFiles(path.join(FX, 'e-inventory.xlsx'))
   await page.getByRole('button', { name: 'Open in bulk import' }).click()
   await expect(page).toHaveURL(/\/import$/)
@@ -86,7 +81,7 @@ test('an inventory spreadsheet is routed to bulk import', async ({ page }) => {
 
 test('unsupported files are rejected with a clear message', async ({ page }) => {
   await login(page)
-  await page.goto('/vehicles/import')
+  await page.goto(`${await addCarByHand(page)}/import`)
   await page.locator('input[type=file][multiple][accept*=".docx"]').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
   await expect(page.getByText(/notes\.txt: this file type is not supported/)).toBeVisible()
 })

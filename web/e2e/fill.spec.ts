@@ -1,22 +1,19 @@
-// Pilot feedback: one "Fill specs" page per car, "Copy from a previous car" and "Paste specs".
-// Copies from the fictional kit sample car (scripts/seed-sample-car.mjs).
+// Pilot feedback: one "Fill specs" page per car, typed by hand, and "Paste specs".
 import { expect, test } from '@playwright/test'
-import { mkdirSync, readFileSync } from 'node:fs'
+import { mkdirSync } from 'node:fs'
 import path from 'node:path'
 import { login, randomChassis } from './helpers'
 
-const SAMPLE = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../kit/sample/sample-data.json'), 'utf8'))
-const SAMPLE_CHASSIS = 'LVTDB21B9RD012345' // fictional, seeded by seed-sample-car.mjs
 const SHOTS = path.resolve(import.meta.dirname, '../../verify-out')
 const value = (id: string) => (p: import('@playwright/test').Page) => p.locator(`#${id}`)
 
-test('new car → copy specs from an earlier one → change price → export, in under a minute', async ({ page }) => {
+test('new car → type specs with the keyboard → price → export, in under a minute', async ({ page }) => {
   test.setTimeout(120_000)
   mkdirSync(SHOTS, { recursive: true })
   await login(page)
   const started = Date.now()
 
-  await page.goto('/vehicles/new?mode=manual')
+  await page.goto('/vehicles/new')
   await page.getByPlaceholder('LVVDB21B9PD012345').fill(randomChassis())
   await page.getByLabel('Brand').fill('Valtren')
   await page.getByLabel('Model').fill('Orisa X5')
@@ -24,45 +21,23 @@ test('new car → copy specs from an earlier one → change price → export, in
   await page.getByRole('button', { name: 'Save vehicle' }).click()
   await page.getByRole('link', { name: 'Fill specs' }).click()
   await page.waitForURL(/\/specs$/)
+  await expect(page.getByRole('button', { name: /Copy from a previous car/ })).toHaveCount(0)
 
-  // The picker lists earlier cars with the same brand + model; nothing is chosen for her.
-  await page.getByRole('button', { name: /Copy from a previous car/ }).click()
-  const dialog = page.getByRole('dialog')
-  const sample = dialog.locator('label', { hasText: SAMPLE_CHASSIS })
-  await expect(sample).toBeVisible()
-  await expect(dialog.locator('input[type=radio]:checked')).toHaveCount(0)
-  await expect(dialog.getByRole('button', { name: 'Copy specs' })).toBeDisabled()
-  await expect(dialog).toContainText('Not copied: chassis number, price, photos')
-  await sample.click()
-  await page.screenshot({ path: path.join(SHOTS, '13-copy-picker.png') })
-  await dialog.getByRole('button', { name: 'Copy specs' }).click()
-  await expect(page.getByText(/Copied \d+ fields and \d+ list items/)).toBeVisible()
-
-  // Every spec field, Arabic included, is now filled and marked as copied.
-  for (const k of ['engine', 'max_torque', 'top_speed']) {
-    await expect(value(`fill-${k}-en`)(page)).toHaveValue(SAMPLE.values[k].en)
-    if (SAMPLE.values[k].ar) await expect(value(`fill-${k}-ar`)(page)).toHaveValue(SAMPLE.values[k].ar)
+  // Enter saves and moves on: English, then Arabic, then the next field.
+  await value('fill-engine-en')(page).click()
+  for (const v of ['1.5L range extender', '', 'Single rear motor', '', '300 kW / 402 HP', '', '640 Nm']) {
+    if (v) await page.keyboard.type(v)
+    await page.keyboard.press('Enter')
   }
-  await expect(page.locator('#fill-top_speed')).toContainText(`Copied from 2024 ${SAMPLE.identity.trim} (…${SAMPLE_CHASSIS.slice(-6)})`)
-  const keyFeatures = await page.locator('#fill-section-key_features input[id^=fill-item]').evaluateAll((els) => els.map((e) => (e as HTMLInputElement).value))
-  expect(keyFeatures).toEqual(SAMPLE.lists.key_features)
-  // Not copied: the price (and trim, which is the car's own identity).
-  await expect(value('fill-listing_price-en')(page)).toHaveValue('')
+  await expect(value('fill-max_torque-en')(page)).toHaveValue('640 Nm')
 
-  // Price: type and press Enter (saves by itself).
   await value('fill-listing_price-en')(page).fill('176000')
   await value('fill-listing_price-en')(page).press('Enter')
   await expect(page.locator('#fill-listing_price [aria-live] svg')).toBeVisible()
-
-  // Editing a copied value removes its mark.
-  await value('fill-top_speed-en')(page).fill('205 km/h')
-  await value('fill-top_speed-en')(page).press('Enter')
-  await expect(page.locator('#fill-top_speed')).not.toContainText('Copied from', { timeout: 10_000 })
-  await expect(page.locator('#fill-max_torque')).toContainText('Copied from')
+  await expect(page.getByText('This already exists')).toHaveCount(0)
 
   // Live spec sheet preview on the right (desktop).
   await expect(page.getByRole('img', { name: 'Spec sheet preview' })).toBeVisible({ timeout: 30_000 })
-  await page.locator('#fill-section-identity').scrollIntoViewIfNeeded()
   await page.evaluate(() => window.scrollTo(0, 0))
   await page.waitForTimeout(1500)
   await page.screenshot({ path: path.join(SHOTS, '11-fill-specs-desktop.png') })
@@ -76,14 +51,14 @@ test('new car → copy specs from an earlier one → change price → export, in
   await download
   await expect(page.getByText(/Spec sheet downloaded/)).toBeVisible({ timeout: 30_000 })
   const seconds = (Date.now() - started) / 1000
-  console.log(`fill → copy → price → export: ${seconds.toFixed(1)} s`)
+  console.log(`add → specs → price → export: ${seconds.toFixed(1)} s`)
   expect(seconds).toBeLessThan(60)
 })
 
 test('paste specs: empty fields are suggested, filled fields that differ need her choice', async ({ page }) => {
   test.setTimeout(90_000)
   await login(page)
-  await page.goto('/vehicles/new?mode=manual')
+  await page.goto('/vehicles/new')
   await page.getByPlaceholder('LVVDB21B9PD012345').fill(randomChassis())
   await page.getByLabel('Brand').fill('Valtren')
   await page.getByLabel('Model').fill('Orisa X5')

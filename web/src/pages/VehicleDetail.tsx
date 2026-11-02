@@ -1,12 +1,12 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Archive, ArchiveRestore, ArrowLeftRight, ArrowRight, BadgeCheck, Eye, FileText, MoreHorizontal, Pencil, ShieldAlert, Upload } from 'lucide-react'
+import { Archive, ArchiveRestore, ArrowLeftRight, ArrowRight, BadgeCheck, Eye, FileText, FileUp, MoreHorizontal, Pencil, ShieldAlert, Trash2 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAccessories, useDocuments, useExpenses, useImages } from '@/api/records'
-import { useArchiveVehicle, useChangeStatus, useUpdateVehicle, useVehicle } from '@/api/vehicles'
+import { useArchiveVehicle, useChangeStatus, useDeleteVehicle, useUpdateVehicle, useVehicle } from '@/api/vehicles'
 import { ChassisInput, useChassisBlocked } from '@/components/ChassisInput'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { ConfirmDialog, Dialog } from '@/components/ui/dialog'
@@ -50,7 +50,7 @@ export function VehicleDetail() {
   const imgs = useImages(id!)
   const acc = useAccessories(id!)
   const exp = useExpenses(id!)
-  const [dialog, setDialog] = useState<null | 'status' | 'edit' | 'archive' | 'chassis'>(null)
+  const [dialog, setDialog] = useState<null | 'status' | 'edit' | 'archive' | 'chassis' | 'delete'>(null)
   const [now] = useState(() => Date.now())
 
   if (q.isLoading) return <PageLoader />
@@ -92,7 +92,6 @@ export function VehicleDetail() {
         <nav className="text-[13px] text-ink-3"><Link to="/vehicles" className="hover:text-ink">{t('common:nav.vehicles')}</Link> / <span className="text-ink-2">{vehicleTitle(v)}</span></nav>
         {canWrite && (
           <div className="ms-auto flex flex-wrap items-center gap-2">
-            <Link to={`/vehicles/${v.id}/import`} className={buttonVariants()}><Upload /> {t('header.importFiles')}</Link>
             <Button onClick={() => setDialog('status')}><ArrowLeftRight className="flip-rtl" /> {t('header.changeStatus')}</Button>
             <Link to={`/vehicles/${v.id}/documents`} className={buttonVariants({ variant: 'primary' })}><FileText /> {t('page.sheetAndBrochure')}</Link>
             <MoreMenu v={v} onPick={setDialog} />
@@ -170,11 +169,12 @@ export function VehicleDetail() {
       <EditDialog v={v} open={dialog === 'edit'} onClose={() => setDialog(null)} />
       <ChassisDialog v={v} open={dialog === 'chassis'} onClose={() => setDialog(null)} />
       <ArchiveDialog v={v} open={dialog === 'archive'} onClose={() => setDialog(null)} />
+      {dialog === 'delete' && <DeleteDialog v={v} onClose={() => setDialog(null)} />}
     </>
   )
 }
 
-function MoreMenu({ v, onPick }: { v: VehicleOverview; onPick: (d: 'edit' | 'chassis' | 'archive') => void }) {
+function MoreMenu({ v, onPick }: { v: VehicleOverview; onPick: (d: 'edit' | 'chassis' | 'archive' | 'delete') => void }) {
   const { t } = useTranslation('vehicle')
   const { profile } = useCompany()
   const [open, setOpen] = useState(false)
@@ -190,7 +190,8 @@ function MoreMenu({ v, onPick }: { v: VehicleOverview; onPick: (d: 'edit' | 'cha
   }, [open])
   const manage = profile.role === 'admin' || profile.role === 'secretary'
   const item = 'flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-start text-[13.5px] hover:bg-raised [&_svg]:size-4 [&_svg]:text-ink-3'
-  const pick = (d: 'edit' | 'chassis' | 'archive') => { setOpen(false); onPick(d) }
+  const admin = profile.role === 'admin'
+  const pick = (d: 'edit' | 'chassis' | 'archive' | 'delete') => { setOpen(false); onPick(d) }
   return (
     <div ref={ref} className="relative">
       <Button size="icon" aria-label={t('page.more')} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(!open)}><MoreHorizontal /></Button>
@@ -203,6 +204,13 @@ function MoreMenu({ v, onPick }: { v: VehicleOverview; onPick: (d: 'edit' | 'cha
             <button role="menuitem" className={item} onClick={() => pick('archive')}>
               {v.archived_at ? <><ArchiveRestore />{t('header.restore')}</> : <><Archive />{t('header.archive')}</>}
             </button>
+          )}
+          {admin && (
+            <>
+              <div className="my-1 border-t border-line-soft" />
+              <Link role="menuitem" className={item} to={`/vehicles/${v.id}/import`}><FileUp />{t('header.importFromFile')}</Link>
+              <button role="menuitem" className={cn(item, 'text-danger [&_svg]:text-danger')} onClick={() => pick('delete')}><Trash2 />{t('header.deleteForever')}</button>
+            </>
           )}
         </div>
       )}
@@ -428,5 +436,47 @@ function ArchiveDialog({ v, open, onClose }: { v: VehicleOverview; open: boolean
       })}>
       {archiving ? t('archiveDialog.bodyArchive') : t('archiveDialog.bodyRestore')}
     </ConfirmDialog>
+  )
+}
+
+/** Permanent delete (admins): the car, everything recorded about it, and its files. */
+function DeleteDialog({ v, onClose }: { v: VehicleOverview; onClose: () => void }) {
+  const { t } = useTranslation(['vehicle', 'common'])
+  const nav = useNavigate()
+  const del = useDeleteVehicle()
+  const [typed, setTyped] = useState('')
+  const last6 = v.chassis_number!.slice(-6).toUpperCase()
+  const ok = typed.replace(/\s/g, '').toUpperCase() === last6
+  return (
+    <Dialog open onClose={onClose} title={t('deleteDialog.title')} size="md"
+      footer={<>
+        <Button variant="ghost" onClick={onClose} disabled={del.isPending}>{t('common:actions.cancel')}</Button>
+        <Button variant="danger" disabled={!ok} loading={del.isPending}
+          onClick={async () => {
+            try {
+              const r = await del.mutateAsync({ id: v.id!, confirm: typed })
+              nav('/vehicles', { replace: true })
+              if (r.filesLeft) toast.warning(t('deleteDialog.filesLeft', { count: r.filesLeft }))
+              else toast.success(t('deleteDialog.done', { chassis: v.chassis_number }))
+            } catch (e) {
+              toast.error(friendlyError(e))
+            }
+          }}><Trash2 />{t('deleteDialog.confirm')}</Button>
+      </>}>
+      <div className="space-y-4 text-[14px]">
+        <div className="rounded-md border border-line-soft bg-raised px-3 py-2.5">
+          <p className="vin text-[17px] font-semibold tracking-wide" dir="ltr">{v.chassis_number}</p>
+          <p className="text-[13px] text-ink-2">{vehicleTitle(v)}</p>
+        </div>
+        <p className="text-ink-2">{t('deleteDialog.body')}</p>
+        <p className="text-ink-2">{t('deleteDialog.archiveHint')}</p>
+        <Field label={t('deleteDialog.typeLabel', { last6 })}>
+          {(id) => (
+            <Input id={id} value={typed} onChange={(e) => setTyped(e.target.value)} autoFocus autoComplete="off" spellCheck={false}
+              dir="ltr" className="vin uppercase tracking-[0.2em]" placeholder={last6} aria-invalid={typed.length >= 6 && !ok} />
+          )}
+        </Field>
+      </div>
+    </Dialog>
   )
 }

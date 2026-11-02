@@ -161,6 +161,32 @@ export function useArchiveVehicle(id: string) {
   })
 }
 
+/**
+ * Permanent delete (admins). The database removes the car and its rows in one transaction
+ * and returns its file paths; the files are then removed from storage. Returns how many
+ * files could not be removed (0 when everything is gone).
+ */
+export function useDeleteVehicle() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (p: { id: string; confirm: string }) => {
+      const { data: paths, error } = await supabase.rpc('delete_vehicle_permanently', { p_vehicle_id: p.id, p_confirm: p.confirm })
+      if (error) throw error
+      let filesLeft = 0
+      const all = paths ?? []
+      for (let i = 0; i < all.length; i += 100) {
+        const chunk = all.slice(i, i + 100)
+        const { data: gone, error: e } = await supabase.storage.from('vehicle-files').remove(chunk)
+        if (e) filesLeft += chunk.length
+        else filesLeft += chunk.length - (gone?.length ?? 0)
+      }
+      return { files: all.length, filesLeft: Math.max(0, filesLeft) }
+    },
+    // Leave the car's page first (it would try to reload a car that's gone), then refresh lists.
+    onSuccess: () => { setTimeout(() => qc.invalidateQueries(), 0) },
+  })
+}
+
 export type DashboardStats = {
   total: number
   in_stock: number

@@ -179,13 +179,14 @@ export default function ImportFiles({ embedded = false }: { embedded?: boolean }
   // ---- Save ----------------------------------------------------------------------------
   async function save() {
     if (blockers.length || !target) return
-    const session = uuid()
-    const base = `${company.id}/imports/${session}`
+    // Files of an existing car go straight into its own folder. A new car doesn't exist yet
+    // (storage only accepts files for existing cars), so its files wait in a one-time folder.
+    const base = target.mode === 'existing' ? `${company.id}/${target.id}` : `${company.id}/imports/${uuid()}`
     try {
       const documents = []
       for (const [i, f] of ready.entries()) {
         setSaving(t('saving.file', { n: i + 1, total: ready.length }))
-        const path = `${base}/${uuid()}.${f.ext}`
+        const path = `${base}/${target.mode === 'existing' ? 'documents/' : ''}${uuid()}.${f.ext}`
         await uploadObject(path, f.file, f.mime)
         documents.push({
           key: f.key, storage_path: path, original_filename: f.file.name, mime_type: f.mime, file_size: f.file.size,
@@ -200,7 +201,7 @@ export default function ImportFiles({ embedded = false }: { embedded?: boolean }
         const type = i.blob.type || 'image/png'
         const ext = type.split('/')[1]?.replace('jpeg', 'jpg') ?? 'png'
         const name = `${f.file.name.replace(/\.[^.]+$/, '')}${i.page ? `-p${i.page}` : ''}.${ext}`
-        const path = `${base}/${uuid()}.${ext}`
+        const path = `${base}/${target.mode === 'existing' ? 'photos/' : ''}${uuid()}.${ext}`
         await uploadObject(path, i.blob, type)
         let thumbnail_path: string | null = null
         const thumb = await makeThumbnail(new File([i.blob], name, { type }))

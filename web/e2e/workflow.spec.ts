@@ -8,7 +8,6 @@ test('secretary workflow: add, document, photos, expenses, sell, find', async ({
 
   // Add vehicle with only the chassis + a few details.
   await page.getByRole('link', { name: 'Add vehicle' }).first().click()
-  await page.getByRole('tab', { name: /Enter manually/ }).click()
   await page.getByPlaceholder('LVVDB21B9PD012345').fill(chassis)
   await page.getByLabel('Brand').fill('Zeekr')
   await page.getByLabel('Model').fill('001 FR')
@@ -69,20 +68,6 @@ test('secretary workflow: add, document, photos, expenses, sell, find', async ({
   await expect(page.getByRole('option').first()).toContainText('Zeekr')
   await page.keyboard.press('Enter')
   await expect(page).toHaveURL(/\/vehicles\//)
-})
-
-test('reads the chassis number from a digital PDF (Add vehicle → From documents)', async ({ page }) => {
-  await login(page)
-  await page.getByRole('link', { name: 'Add vehicle' }).first().click()
-  await expect(page.getByRole('tab', { name: /Enter manually/ })).toHaveAttribute('aria-selected', 'true')
-  await page.getByRole('tab', { name: /From documents/ }).click()
-  await expect(page.getByText('Drop files here, or click to choose')).toBeVisible()
-  await page.locator('input[type=file][multiple][accept*=".docx"]').setInputFiles(path.join(FIXTURES, 'a_digital_certificate.pdf'))
-  const chassis = page.locator('fieldset[data-field=chassis_number]')
-  await expect(chassis.locator('input[type=radio]:checked')).toHaveCount(1, { timeout: 20_000 })
-  await expect(chassis).toContainText('1GNSKCKD7PR123456')
-  await expect(page.locator('fieldset[data-field=brand]')).toContainText('Chevrolet')
-  await page.screenshot({ path: 'e2e/screens/add-from-pdf.png', fullPage: true })
 })
 
 test('dashboard and list screenshots', async ({ page }) => {

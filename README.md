@@ -168,6 +168,10 @@ it keeps running after the terminal closes, restarts within ~20 s if it crashes,
 login (bringing up Docker and the database), and keeps the Mac from idle-sleeping (`caffeinate -i`).
 Closing the lid still sleeps the Mac: keep it open and on power. Other devices on the same Wi-Fi open
 `http://<LocalHostName>.local:5180` (stable) or the IP that `status` prints (can change).
+File check (read-only; files shared between cars, files outside their car's folder, orphans):
+`PGPASSWORD=postgres psql -h 127.0.0.1 -p 56322 -U postgres -f scripts/check-files.sql`.
+Admins delete a car permanently (rows and files) from the car's ⋯ menu; everyone else archives.
+
 Protection: seeds, bootstrap, verify scripts and the Playwright config refuse pilot ports
 (`web/scripts/guard.mjs`); the pilot rejects the dev service key at the data API; restoring into the
 pilot always asks you to type its name. Never run `supabase db reset` or `supabase stop --no-backup`

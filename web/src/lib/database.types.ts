@@ -3,25 +3,7 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 
 export type Database = {
   
-  "graphql_public": {
-          Tables: {
-            [_ in never]: never
-          }
-          Views: {
-            [_ in never]: never
-          }
-          Functions: {
-            "graphql":
-{ Args: { "extensions"?: Json,"operationName"?: string,"query"?: string,"variables"?: Json }; Returns: Json
-                           }
-          }
-          Enums: {
-            [_ in never]: never
-          }
-          CompositeTypes: {
-            [_ in never]: never
-          }
-        },"public": {
+  "public": {
           Tables: {
             "accessories": {
                   Row: {
@@ -229,29 +211,17 @@ isOneToOne: false
                   ]
                 },"vehicle_specs": {
                   Row: {
-                    "company_id": string,"copied_from_vehicle_id": string | null,"created_at": string,"field_key": string | null,"id": string,"label": string,"label_alt": string | null,"position": number | null,"section": string | null,"sort_order": number,"source_document_id": string | null,"source_page": number | null,"unit": string | null,"updated_at": string,"value_ar": string | null,"value_en": string | null,"vehicle_id": string,"verified": boolean
+                    "company_id": string,"created_at": string,"field_key": string | null,"id": string,"label": string,"label_alt": string | null,"position": number | null,"section": string | null,"sort_order": number,"source_document_id": string | null,"source_page": number | null,"unit": string | null,"updated_at": string,"value_ar": string | null,"value_en": string | null,"vehicle_id": string,"verified": boolean
                   }
                   ComputedFields: never
                   Insert: {
-                    "company_id"?: string,"copied_from_vehicle_id"?: string | null,"created_at"?: string,"field_key"?: string | null,"id"?: string,"label": string,"label_alt"?: string | null,"position"?: number | null,"section"?: string | null,"sort_order"?: number,"source_document_id"?: string | null,"source_page"?: number | null,"unit"?: string | null,"updated_at"?: string,"value_ar"?: string | null,"value_en"?: string | null,"vehicle_id": string,"verified"?: boolean
+                    "company_id"?: string,"created_at"?: string,"field_key"?: string | null,"id"?: string,"label": string,"label_alt"?: string | null,"position"?: number | null,"section"?: string | null,"sort_order"?: number,"source_document_id"?: string | null,"source_page"?: number | null,"unit"?: string | null,"updated_at"?: string,"value_ar"?: string | null,"value_en"?: string | null,"vehicle_id": string,"verified"?: boolean
                   }
                   Update: {
-                    "company_id"?: string,"copied_from_vehicle_id"?: string | null,"created_at"?: string,"field_key"?: string | null,"id"?: string,"label"?: string,"label_alt"?: string | null,"position"?: number | null,"section"?: string | null,"sort_order"?: number,"source_document_id"?: string | null,"source_page"?: number | null,"unit"?: string | null,"updated_at"?: string,"value_ar"?: string | null,"value_en"?: string | null,"vehicle_id"?: string,"verified"?: boolean
+                    "company_id"?: string,"created_at"?: string,"field_key"?: string | null,"id"?: string,"label"?: string,"label_alt"?: string | null,"position"?: number | null,"section"?: string | null,"sort_order"?: number,"source_document_id"?: string | null,"source_page"?: number | null,"unit"?: string | null,"updated_at"?: string,"value_ar"?: string | null,"value_en"?: string | null,"vehicle_id"?: string,"verified"?: boolean
                   }
                   Relationships: [
                     {
-      foreignKeyName: "vehicle_specs_copied_from_vehicle_id_fkey"
-      columns: ["copied_from_vehicle_id"]
-isOneToOne: false
-      referencedRelation: "vehicle_overview"
-      referencedColumns: ["id"]
-    },{
-      foreignKeyName: "vehicle_specs_copied_from_vehicle_id_fkey"
-      columns: ["copied_from_vehicle_id"]
-isOneToOne: false
-      referencedRelation: "vehicles"
-      referencedColumns: ["id"]
-    },{
       foreignKeyName: "vehicle_specs_source_document_id_fkey"
       columns: ["source_document_id"]
 isOneToOne: false
@@ -378,9 +348,6 @@ isOneToOne: false
         isOneToOne: true
         isSetofReturn: false
       } },
-"copy_specs_from":
-{ Args: { "p_source": string,"p_target": string }; Returns: Json
-                           },
 "current_app_role":
 { Args: Record<PropertyKey, never>; Returns: Database["public"]['Enums']["app_role"]
                            },
@@ -389,6 +356,9 @@ isOneToOne: false
                            },
 "dashboard_stats":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"delete_vehicle_permanently":
+{ Args: { "p_confirm": string,"p_vehicle_id": string }; Returns: (string)[]
                            },
 "import_vehicles":
 { Args: { "p_rows": Json }; Returns: number
@@ -548,11 +518,7 @@ export type CompositeTypes<
   : never
 
 export const Constants = {
-  "graphql_public": {
-          Enums: {
-            
-          }
-        },"public": {
+  "public": {
           Enums: {
             "accessory_type": ["physical_key", "smart_key", "nfc_card", "charger", "other"],"app_role": ["admin", "secretary", "staff", "viewer"],"document_type": ["vehicle_pdf", "registration", "inspection", "purchase", "other", "brochure"],"expense_category": ["mechanical", "electrical", "bodywork", "paint", "tires", "maintenance", "transportation", "accessories", "other"],"image_type": ["arrival", "current", "garage", "information_card", "other"],"item_status": ["present", "missing", "unknown"],"job_status": ["pending", "processing", "needs_review", "verified", "failed"],"vehicle_status": ["in_stock", "in_garage", "reserved", "sold", "delivered"],"verification_status": ["unverified", "verified"]
           }
