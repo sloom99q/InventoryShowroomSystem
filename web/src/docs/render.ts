@@ -15,6 +15,7 @@
 // 6 pt (8 px) of the slide bottom, like kit/templates/render.mjs.
 import { compileWithQuery } from '@/pdf/engine'
 import { FIELDS } from '@/lib/fields'
+import { arabicFor } from '@/lib/fields/arabic'
 import { BROCHURE, SPEC_SHEET } from './templates'
 import type { Bi, DocData, RenderResult } from './types'
 
@@ -79,7 +80,7 @@ export function brochureSections(data: DocData) {
       for (const f of s.fields ?? []) {
         if (f.in_brochure === false) continue
         const ve = val(data, f.key, 'en')
-        const va = val(data, f.key, 'ar')
+        const va = arabicFor(ve, val(data, f.key, 'ar'))
         if (ve) en.push(`${f.label_en}: ${ve}`)
         if (va) ar.push(`${f.label_ar}: ${va}`)
       }
@@ -87,13 +88,14 @@ export function brochureSections(data: DocData) {
         const items = ((data.lists as Record<string, Bi[] | undefined>)?.[s.list] ?? [])
         if (s.key === 'drive_modes') {
           const e = items.map((i) => i.en).filter(Boolean)
-          const a = items.map((i) => i.ar).filter(Boolean)
+          const a = items.map((i) => arabicFor(i.en, i.ar)).filter(Boolean)
           if (e.length) en.push(e.join(' / '))
           if (a.length) ar.push(a.join(' / '))
         } else {
           for (const i of items) {
             if (i.en) en.push(i.en)
-            if (i.ar) ar.push(i.ar)
+            const a = arabicFor(i.en, i.ar)
+            if (a) ar.push(a)
           }
         }
       }

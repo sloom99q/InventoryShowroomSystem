@@ -133,7 +133,7 @@ export function inspect(
   const r = readiness(v, data)
   for (const g of r.gaps) {
     if (['brand', 'model', 'year', 'listing_price'].includes(g.key)) continue
-    out.push({ level: 'warn', code: g.kind === 'empty' ? 'empty_field' : 'no_arabic', params: { label: g.label }, target: { kind: 'field', key: g.key, lang: g.kind === 'empty' ? 'en' : 'ar', rowId: g.rowId } })
+    out.push({ level: 'warn', code: 'empty_field', params: { label: g.label }, target: { kind: 'field', key: g.key, lang: 'en', rowId: g.rowId } })
   }
   if (kind === 'brochure') {
     const sel = brochurePhotos(images, readSettings(v))

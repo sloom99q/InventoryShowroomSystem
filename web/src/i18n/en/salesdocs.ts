@@ -22,7 +22,6 @@ export default {
   checklist: { title: 'Before exporting', allGood: 'Ready to export', show: 'Show' },
   issue: {
     empty_field: '“{{label}}” is empty',
-    no_arabic: 'No Arabic for “{{label}}”',
     slide_overflow: 'Brochure spec slide {{slide}} doesn’t fit. Shorten some values.',
     missing_brand: 'Brand is missing',
     missing_model: 'Model is missing',

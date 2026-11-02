@@ -10,6 +10,7 @@ import { type SpecRow, useFieldWriter, type VehicleData } from '@/api/fields'
 import { useUpdateVehicle } from '@/api/vehicles'
 import { cn } from '@/lib/cn'
 import { type FieldDef, FIELDS, type SectionDef } from '@/lib/fields'
+import { arabicFor, printsArabic } from '@/lib/fields/arabic'
 import { fmtMoney, parseAmount } from '@/lib/format'
 import { friendlyError, supabase } from '@/lib/supabase'
 import type { VehicleOverview } from '@/lib/types'
@@ -26,8 +27,10 @@ function focusNext(from: HTMLElement) {
 }
 
 /** One self-saving cell. */
-function Cell({ id, value, onSave, dir = 'auto', lang, placeholder, inputMode, mode, display, disabled }: {
+function Cell({ id, value, onSave, dir = 'auto', lang, placeholder, inputMode, mode, display, disabled, fallback }: {
   id?: string
+  /** Printed when the cell is left empty (Arabic: the English value, translated where possible). */
+  fallback?: string
   value: string
   onSave: (v: string) => Promise<unknown>
   dir?: 'ltr' | 'rtl' | 'auto'
@@ -42,26 +45,32 @@ function Cell({ id, value, onSave, dir = 'auto', lang, placeholder, inputMode, m
   const [status, setStatus] = useState<Status>('idle')
   const focused = useRef(false)
   useEffect(() => { if (!focused.current) setDraft(value) }, [value])
+  // Enter saves and moves focus, and leaving the cell saves too: the same text only once.
+  const sent = useRef<string | null>(null)
+  useEffect(() => { sent.current = null }, [value])
 
   if (mode === 'read') {
     const text = display ?? value
-    return <span className={cn('block px-2 py-1.5 text-[13.5px]', !text && 'text-ink-3')} dir={dir} lang={lang}>{text || '—'}</span>
+    return <span className={cn('block px-2 py-1.5 text-[13.5px]', !text && 'text-ink-3')} dir={dir} lang={lang}>{text || fallback || '—'}</span>
   }
   const commit = async () => {
-    if (draft.trim() === value.trim()) return
+    const next = draft.trim()
+    if (next === value.trim() || next === sent.current) return
+    sent.current = next
     setStatus('saving')
     try {
-      await onSave(draft.trim())
+      await onSave(next)
       setStatus('saved')
       setTimeout(() => setStatus((s) => (s === 'saved' ? 'idle' : s)), 1500)
     } catch (e) {
+      sent.current = null
       setStatus('error')
       toast.error(friendlyError(e))
     }
   }
   return (
     <span className="relative block">
-      <input id={id} data-fill value={draft} dir={dir} lang={lang} placeholder={placeholder} inputMode={inputMode} disabled={disabled} aria-label={placeholder}
+      <input id={id} data-fill value={draft} dir={dir} lang={lang} placeholder={fallback !== undefined ? fallback : placeholder} inputMode={inputMode} disabled={disabled} aria-label={placeholder}
         onFocus={() => { focused.current = true }}
         onBlur={() => { focused.current = false; void commit() }}
         onChange={(e) => setDraft(e.target.value)}
@@ -70,7 +79,9 @@ function Cell({ id, value, onSave, dir = 'auto', lang, placeholder, inputMode, m
           if (e.key === 'Escape') { setDraft(value); e.currentTarget.blur() }
         }}
         className={cn('h-8 w-full rounded-sm border px-2 text-[13.5px] transition-colors focus:border-accent focus:bg-surface focus:outline-none disabled:cursor-not-allowed disabled:opacity-50',
-          !draft.trim() ? 'border-dashed border-line bg-warn/[0.07] placeholder:text-ink-3/70' : 'border-transparent bg-transparent hover:border-line',
+          draft.trim() ? 'border-transparent bg-transparent hover:border-line'
+            : fallback !== undefined ? 'border-transparent bg-transparent placeholder:text-ink-3 hover:border-line'
+              : 'border-dashed border-line bg-warn/[0.07] placeholder:text-ink-3/70',
           status === 'error' && 'border-danger')} />
       {status !== 'idle' && (
         <span className="pointer-events-none absolute end-1.5 top-1/2 -translate-y-1/2" aria-live="polite">
@@ -138,8 +149,11 @@ export function SpecTable({ vehicle, data, mode }: Props) {
         <Label en={def.label_en} ar={def.label_ar}>{copied(row)}{extra}</Label>
         <Cell id={`fill-${def.key}-en`} mode={mode} value={row?.value_en ?? ''} placeholder={def.label_en}
           onSave={(v) => w.setField.mutateAsync({ key: def.key, value: { en: v } })} />
-        <Cell id={`fill-${def.key}-ar`} mode={mode} value={row?.value_ar ?? ''} dir="rtl" lang="ar" placeholder={def.label_ar}
-          onSave={(v) => w.setField.mutateAsync({ key: def.key, value: { ar: v } })} />
+        {printsArabic(def.key) ? (
+          <Cell id={`fill-${def.key}-ar`} mode={mode} value={row?.value_ar ?? ''} dir="rtl" lang="ar" placeholder={def.label_ar}
+            fallback={arabicFor(row?.value_en, null)}
+            onSave={(v) => w.setField.mutateAsync({ key: def.key, value: { ar: v } })} />
+        ) : <span />}
       </div>
     )
   }
@@ -168,6 +182,7 @@ export function SpecTable({ vehicle, data, mode }: Props) {
               onSave={(v) => (!v && !it.value_ar ? w.removeRow.mutateAsync(it.id) : w.updateRow.mutateAsync({ id: it.id, patch: { value_en: v || null } }))} />
             {enOnly ? <span /> : (
               <Cell id={`fill-item-${it.id}-ar`} mode={mode} value={it.value_ar ?? ''} dir="rtl" lang="ar" placeholder={t('fill.itemAr')}
+                fallback={arabicFor(it.value_en, null)}
                 onSave={(v) => (!v && !it.value_en ? w.removeRow.mutateAsync(it.id) : w.updateRow.mutateAsync({ id: it.id, patch: { value_ar: v || null } }))} />
             )}
           </div>

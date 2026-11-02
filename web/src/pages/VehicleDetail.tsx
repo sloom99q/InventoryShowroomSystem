@@ -80,9 +80,8 @@ export function VehicleDetail() {
         : t('header.accComplete')
 
   /** Readiness item clicked: open Fill specs at that field. */
-  const goTo = (key: string, rowId?: string, kind?: string) => {
+  const goTo = (key: string, rowId?: string) => {
     const q = new URLSearchParams({ field: key })
-    if (kind === 'arabic') q.set('lang', 'ar')
     if (rowId && isListKey(key)) q.set('item', rowId)
     nav(`/vehicles/${v.id}/specs?${q}`)
   }
@@ -211,7 +210,7 @@ function MoreMenu({ v, onPick }: { v: VehicleOverview; onPick: (d: 'edit' | 'cha
   )
 }
 
-function ReadinessBar({ v, data, onGo }: { v: VehicleOverview; data: VehicleData; onGo: (key: string, rowId?: string, kind?: string) => void }) {
+function ReadinessBar({ v, data, onGo }: { v: VehicleOverview; data: VehicleData; onGo: (key: string, rowId?: string) => void }) {
   const { t } = useTranslation('vehicle')
   const [open, setOpen] = useState(false)
   const r = readiness(v as never, data)
@@ -225,7 +224,7 @@ function ReadinessBar({ v, data, onGo }: { v: VehicleOverview; data: VehicleData
         <p className="text-[13.5px]">
           <b className="font-semibold">{t('ready.title', { pct: r.pct })}</b>{' '}
           <span className="text-ink-2">
-            {done ? t('ready.allSet') : [r.empty ? t('ready.empty', { count: r.empty }) : null, r.arabic ? t('ready.arabic', { count: r.arabic }) : null].filter(Boolean).join(' · ')}
+            {done ? t('ready.allSet') : t('ready.empty', { count: r.empty })}
           </span>
         </p>
         {!done && (
@@ -238,10 +237,10 @@ function ReadinessBar({ v, data, onGo }: { v: VehicleOverview; data: VehicleData
         <ul className="grid gap-x-6 border-t border-line-soft px-4 py-2 sm:grid-cols-2 lg:grid-cols-3">
           {r.gaps.map((g, i) => (
             <li key={`${g.kind}:${g.key}:${g.rowId ?? i}`}>
-              <button className="flex w-full items-center gap-2 py-1.5 text-start text-[13px] hover:text-accent" onClick={() => onGo(g.key, g.rowId, g.kind)}>
-                <span className={cn('size-1.5 shrink-0 rounded-full', g.kind === 'empty' ? 'bg-ink-3' : 'bg-warn')} />
+              <button className="flex w-full items-center gap-2 py-1.5 text-start text-[13px] hover:text-accent" onClick={() => onGo(g.key, g.rowId)}>
+                <span className="size-1.5 shrink-0 rounded-full bg-ink-3" />
                 <span className="min-w-0 flex-1 truncate" dir="auto">{g.label}</span>
-                <span className="text-[12px] text-ink-3">{g.kind === 'empty' ? t('ready.emptyItem') : t('ready.arabicItem')}</span>
+                <span className="text-[12px] text-ink-3">{t('ready.emptyItem')}</span>
               </button>
             </li>
           ))}

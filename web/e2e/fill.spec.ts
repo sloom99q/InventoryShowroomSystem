@@ -111,6 +111,18 @@ test('paste specs: empty fields are suggested, filled fields that differ need he
 
   await expect(value('fill-top_speed-en')(page)).toHaveValue('190 km/h')
   await expect(value('fill-max_torque-en')(page)).toHaveValue('640 Nm')
+  // Arabic isn't a separate value to fill: empty, it prints the English translated (or as it is).
+  await expect(value('fill-max_torque-ar')(page)).toHaveValue('')
+  await expect(value('fill-max_torque-ar')(page)).toHaveAttribute('placeholder', '640 نيوتن متر')
+  await expect(page.locator('#fill-description-ar')).toHaveCount(0)
+  await expect(page.getByText('This already exists')).toHaveCount(0) // Enter + leaving the cell saved once
+  await page.locator('#fill-section-engine_performance').scrollIntoViewIfNeeded()
+  await page.screenshot({ path: path.resolve(import.meta.dirname, '../../verify-out/14-fill-arabic-follows-english.png') })
   const smart = await page.locator('#fill-section-smart_driving input[id^=fill-item][id$=-en]').evaluateAll((els) => els.map((e) => (e as HTMLInputElement).value))
   expect(smart).toEqual(['Adaptive Cruise Control', 'Lane Keeping Assist'])
+
+  // The car page no longer counts Arabic as missing.
+  await page.goto(page.url().replace(/\/specs$/, ''))
+  await expect(page.getByText(/Documents \d+% ready/)).toBeVisible()
+  await expect(page.locator('main')).not.toContainText(/Arabic (value|missing)/)
 })

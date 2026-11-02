@@ -26,7 +26,6 @@ const ar: Messages<typeof en> = {
   checklist: { title: 'قبل التصدير', allGood: 'جاهز للتصدير', show: 'عرض' },
   issue: {
     empty_field: '"{{label}}" فارغ',
-    no_arabic: 'لا يوجد نص عربي لـ "{{label}}"',
     slide_overflow: 'شريحة المواصفات {{slide}} في البروشور لا تتسع. اختصر بعض القيم.',
     missing_brand: 'الماركة غير موجودة',
     missing_model: 'الموديل غير موجود',

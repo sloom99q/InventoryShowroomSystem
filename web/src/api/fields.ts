@@ -157,11 +157,12 @@ export function useFieldWriter(vehicleId: string) {
 // "Documents X% ready"
 // ---------------------------------------------------------------------------
 
-export type Gap = { kind: 'empty' | 'arabic'; key: string; label: string; rowId?: string }
+export type Gap = { kind: 'empty'; key: string; label: string; rowId?: string }
 
 type VehicleIdentity = { brand: string | null; model: string | null; year: number | null; trim_level: string | null; listing_price: number | null }
 
-/** What's still missing before the documents are complete: empty fields and missing Arabic. */
+/** What's still missing before the documents are complete: empty fields. Arabic is never
+ * "missing": the brochure prints the English value translated (see lib/fields/arabic). */
 export function readiness(v: VehicleIdentity, data: VehicleData) {
   const gaps: Gap[] = []
   let total = 0
@@ -173,25 +174,16 @@ export function readiness(v: VehicleIdentity, data: VehicleData) {
   }
   for (const f of STORED_FIELDS.filter((x) => SECTION_OF.has(x.key))) {
     const row = data.fields.get(f.key)
-    if (!row?.value_en) {
-      total++
-      gaps.push({ kind: 'empty', key: f.key, label: f.label_en })
-    } else {
-      total += 2 // the value and its Arabic
-      if (!row.value_ar) gaps.push({ kind: 'arabic', key: f.key, label: f.label_en, rowId: row.id })
-    }
+    total++
+    if (!row?.value_en) gaps.push({ kind: 'empty', key: f.key, label: f.label_en })
   }
   for (const s of FIELDS.sections.filter((x) => x.list)) {
     const items = data.lists[s.list!] ?? []
     total++
     if (!items.length) gaps.push({ kind: 'empty', key: s.list!, label: s.title_en })
-    for (const it of items) {
-      total++
-      if (!it.value_ar) gaps.push({ kind: 'arabic', key: s.list!, label: it.value_en ?? s.title_en, rowId: it.id })
-    }
   }
   total++
   if (!(data.lists.key_features ?? []).length) gaps.push({ kind: 'empty', key: 'key_features', label: FIELDS.key_features.label_en })
   const filled = Math.max(0, total - gaps.length)
-  return { pct: total ? Math.round((filled / total) * 100) : 100, gaps, empty: gaps.filter((g) => g.kind === 'empty').length, arabic: gaps.filter((g) => g.kind === 'arabic').length }
+  return { pct: total ? Math.round((filled / total) * 100) : 100, gaps, empty: gaps.length }
 }
