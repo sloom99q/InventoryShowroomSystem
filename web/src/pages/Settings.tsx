@@ -36,7 +36,7 @@ function ColorField({ label, hint, value, onChange, warning }: { label: string; 
   )
 }
 
-function LogoField({ label, hint, path, companyId, onChange, dark, wide }: { label: string; hint: string; path: string | null; companyId: string; onChange: (p: string | null) => void; dark?: boolean; wide?: boolean }) {
+function LogoField({ label, hint, path, companyId, onChange, dark, wide, onDark }: { label: string; hint: string; path: string | null; companyId: string; onChange: (p: string | null) => void; dark?: boolean; wide?: boolean; /** White artwork: preview on a dark background. */ onDark?: boolean }) {
   const { t } = useTranslation('settings')
   const url = useSignedUrl(path)
   const [busy, setBusy] = useState(false)
@@ -59,7 +59,7 @@ function LogoField({ label, hint, path, companyId, onChange, dark, wide }: { lab
     <Field label={label} hint={hint}>
       {(id) => (
         <div className="flex flex-wrap items-center gap-3">
-          <div className={cn('flex items-center justify-center rounded-md border border-line p-2', wide ? 'h-20 w-80' : 'h-16 w-44', dark ? 'bg-[var(--chrome)]' : 'bg-white')}>
+          <div className={cn('flex items-center justify-center rounded-md border border-line p-2', wide ? 'h-20 w-80' : 'h-16 w-44', onDark ? 'bg-[#23272e]' : dark ? 'bg-[var(--chrome)]' : 'bg-white')}>
             {url.data ? <img src={url.data} alt="" className="max-h-full max-w-full object-contain" /> : <ImageUp className="size-5 text-ink-3" />}
           </div>
           <label className={cn('inline-flex h-9 cursor-pointer items-center rounded-md border border-line bg-surface px-3 text-sm hover:bg-hover', busy && 'pointer-events-none opacity-60')}>
@@ -138,7 +138,7 @@ export default function Settings() {
             <div className="space-y-5 p-5">
               <p className="text-[13px] text-ink-2">{t('salesdocs:settings.hint')}</p>
               <LogoField label={t('salesdocs:settings.bannerLeft')} hint={t('salesdocs:settings.bannerLeftHint')} path={d.doc_banner_left_path} companyId={company.id} onChange={(p) => set({ doc_banner_left_path: p })} wide />
-              <LogoField label={t('salesdocs:settings.bannerText')} hint={t('salesdocs:settings.bannerTextHint')} path={d.doc_banner_text_path} companyId={company.id} onChange={(p) => set({ doc_banner_text_path: p })} wide dark />
+              <LogoField label={t('salesdocs:settings.bannerText')} hint={t('salesdocs:settings.bannerTextHint')} path={d.doc_banner_text_path} companyId={company.id} onChange={(p) => set({ doc_banner_text_path: p })} wide onDark />
               <LogoField label={t('salesdocs:settings.banner')} hint={t('salesdocs:settings.bannerHint')} path={d.doc_banner_path} companyId={company.id} onChange={(p) => set({ doc_banner_path: p })} wide />
               <LogoField label={t('salesdocs:settings.watermark')} hint={t('salesdocs:settings.watermarkHint')} path={d.doc_watermark_path} companyId={company.id} onChange={(p) => set({ doc_watermark_path: p })} />
               <div className="grid gap-4 sm:grid-cols-2">

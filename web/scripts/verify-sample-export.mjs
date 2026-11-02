@@ -4,6 +4,7 @@
 //
 //   node scripts/verify-sample-export.mjs [outDir]
 import { chromium } from '@playwright/test'
+import { refusePilot } from './guard.mjs'
 import { execFileSync } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
 import path from 'node:path'
@@ -11,6 +12,7 @@ import path from 'node:path'
 const out = path.resolve(process.argv[2] ?? 'verify-out')
 mkdirSync(out, { recursive: true })
 const app = process.env.APP_URL ?? 'http://127.0.0.1:5173'
+refusePilot(app)
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 1 })
 

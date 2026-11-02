@@ -6,6 +6,7 @@
 //
 //   node scripts/verify-real-import.mjs [outDir]
 import { chromium } from '@playwright/test'
+import { refusePilot } from './guard.mjs'
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
@@ -17,6 +18,7 @@ const specPdf = path.join(FX, '14_VOYAH_FREE_Spec_Sheet.pdf')
 const brochurePdf = path.join(FX, 'VOYAH_FREE.pdf')
 const docDate = JSON.parse(readFileSync(path.join(FX, 'spec-sheet.expected.json'), 'utf8')).doc_date
 const app = process.env.APP_URL ?? 'http://127.0.0.1:5173'
+refusePilot(app)
 const browser = await chromium.launch()
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } })
 

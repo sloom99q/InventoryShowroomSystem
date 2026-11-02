@@ -7,11 +7,13 @@
 //   LOGO=path/to/logo.png LOGO_DARK=path/to/logo-on-dark.png
 // Run once per company. The service-role key must never be put in the web app.
 import { createClient } from '@supabase/supabase-js'
+import { refusePilot } from './guard.mjs'
 import { readFile } from 'node:fs/promises'
 import { extname } from 'node:path'
 
 const [name, email, password, fullName = ''] = process.argv.slice(2)
 const url = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321'
+refusePilot(url)
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY
 if (!name || !email || !password || !key) {
   console.error('usage: SUPABASE_SERVICE_ROLE_KEY=... node scripts/bootstrap.mjs "Company" email password ["Full Name"]')

@@ -38,7 +38,11 @@ if [ -n "$MISSING" ]; then
   echo "  Apply them first (supabase migration up / db reset in $WORKDIR)."; exit 1
 fi
 
-if [ "$YES" != "--yes" ]; then
+if [[ "$PROJECT_ID" == *Pilot* ]]; then
+  # The pilot holds real data: always ask, and make the person type its name.
+  read -r -p "This REPLACES the PILOT's real data with $(basename "$SRC"). Type the project name ($PROJECT_ID) to continue: " answer
+  [ "$answer" = "$PROJECT_ID" ] || { echo "Cancelled."; exit 1; }
+elif [ "$YES" != "--yes" ]; then
   read -r -p "Replace ALL data and files in '$PROJECT_ID' with $(basename "$SRC")? Type 'restore': " answer
   [ "$answer" = "restore" ] || { echo "Cancelled."; exit 1; }
 fi

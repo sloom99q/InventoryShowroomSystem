@@ -2,7 +2,10 @@ import { createClient } from '@supabase/supabase-js'
 import i18n from '@/i18n'
 import type { Database } from './database.types'
 
-const url = import.meta.env.VITE_SUPABASE_URL
+// A path such as "/sb" means "same server as the app" (pilot mode: the app server
+// forwards it to Supabase, so phones on the network need only one address).
+const rawUrl: string | undefined = import.meta.env.VITE_SUPABASE_URL
+const url = rawUrl?.startsWith('/') ? new URL(rawUrl, window.location.origin).toString().replace(/\/$/, '') : rawUrl
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY
 if (!url || !key) throw new Error('VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY must be set (see .env.example)')
 

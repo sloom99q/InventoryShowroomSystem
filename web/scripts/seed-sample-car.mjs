@@ -6,10 +6,12 @@
 //
 // Local development only. Re-running replaces the sample car's data, not duplicates it.
 import { createClient } from '@supabase/supabase-js'
+import { refusePilot } from './guard.mjs'
 import { readFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 
 const url = process.env.SUPABASE_URL ?? 'http://127.0.0.1:54321'
+refusePilot(url)
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY
 if (!key) {
   console.error('usage: SUPABASE_SERVICE_ROLE_KEY=... node scripts/seed-sample-car.mjs ["Company name"]')

@@ -10,7 +10,15 @@ web/test-results/
 web/playwright-report/
 web/e2e/screens/
 web/node_modules/.tmp/
-supabase/.temp/
-supabase/.branches/
+**/supabase/.temp/
+**/supabase/.branches/
 web/e2e/docs-out/
 verify-out/
+
+# Pilot instance secrets (never commit)
+pilot/supabase/signing_keys.json
+pilot/.env
+pilot/.credentials
+web/dist-pilot/
+pilot/app.pid
+pilot/app.log

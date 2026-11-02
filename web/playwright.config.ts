@@ -1,4 +1,12 @@
 import { defineConfig, devices } from '@playwright/test'
+import { readFileSync } from 'node:fs'
+// @ts-expect-error plain JS helper
+import { refusePilot } from './scripts/guard.mjs'
+
+// Tests must never touch the pilot (real data): check the app URL and the Supabase URL the app uses.
+const envUrl = (() => { try { return /VITE_SUPABASE_URL=(.*)/.exec(readFileSync('.env.local', 'utf8'))?.[1]?.trim() } catch { return undefined } })()
+refusePilot(envUrl, 'The test suite')
+refusePilot(process.env.APP_URL, 'The test suite')
 
 // Runs against the local dev server and local Supabase (`supabase start`).
 // Seed an admin first: see README "Local development".

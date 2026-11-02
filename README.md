@@ -152,6 +152,22 @@ the checksums and migrations first, replaces the data in one transaction, copies
 verifies the counts against the manifest. `SUPABASE_WORKDIR=<project>` targets another local project.
 Tested by restoring into a fresh second local instance: same login, same records, byte-identical files.
 
+## Pilot instance (the showroom's real data)
+
+A separate local Supabase project in `pilot/` (own ports 563xx, own Docker volumes, own signing
+key in `pilot/supabase/signing_keys.json`, never committed). It started empty: company settings and
+two logins only (`web/scripts/pilot-setup.mjs`, one-time; passwords in `pilot/.credentials`).
+
+```sh
+scripts/pilot.sh start            # Docker + pilot database + app on :5180 (prints the phone address)
+scripts/pilot.sh status | stop    # stop keeps the data
+scripts/pilot-schedule.sh status  # daily 18:00 backup → ~/ShowroomBackups/pilot (launchd)
+```
+Protection: seeds, bootstrap, verify scripts and the Playwright config refuse pilot ports
+(`web/scripts/guard.mjs`); the pilot rejects the dev service key at the data API; restoring into the
+pilot always asks you to type its name. Never run `supabase db reset` or `supabase stop --no-backup`
+in `pilot/`.
+
 ## Deploying (private web app)
 
 1. Create a Supabase project (region: closest to UAE, e.g. `ap-south-1` Mumbai / `eu-central-1`).
