@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { uuid } from '@/lib/uuid'
 import { AlertTriangle, CarFront, FilePlus2, Plus, Search } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -77,7 +78,7 @@ export default function ImportFiles({ embedded = false }: { embedded?: boolean }
       if (file.size > MAX_FILE_BYTES) { bad.push(t('common:files.tooLarge', { name: file.name })); continue }
       const kind = await detectKind(file)
       if (!kind) { bad.push(t('files.unsupported', { name: file.name })); continue }
-      fresh.push({ key: crypto.randomUUID(), file, kind: kind.kind, mime: kind.mime, ext: kind.ext, status: 'reading', images: [] })
+      fresh.push({ key: uuid(), file, kind: kind.kind, mime: kind.mime, ext: kind.ext, status: 'reading', images: [] })
     }
     setRejected(bad)
     if (!fresh.length) return
@@ -178,13 +179,13 @@ export default function ImportFiles({ embedded = false }: { embedded?: boolean }
   // ---- Save ----------------------------------------------------------------------------
   async function save() {
     if (blockers.length || !target) return
-    const session = crypto.randomUUID()
+    const session = uuid()
     const base = `${company.id}/imports/${session}`
     try {
       const documents = []
       for (const [i, f] of ready.entries()) {
         setSaving(t('saving.file', { n: i + 1, total: ready.length }))
-        const path = `${base}/${crypto.randomUUID()}.${f.ext}`
+        const path = `${base}/${uuid()}.${f.ext}`
         await uploadObject(path, f.file, f.mime)
         documents.push({
           key: f.key, storage_path: path, original_filename: f.file.name, mime_type: f.mime, file_size: f.file.size,
@@ -199,7 +200,7 @@ export default function ImportFiles({ embedded = false }: { embedded?: boolean }
         const type = i.blob.type || 'image/png'
         const ext = type.split('/')[1]?.replace('jpeg', 'jpg') ?? 'png'
         const name = `${f.file.name.replace(/\.[^.]+$/, '')}${i.page ? `-p${i.page}` : ''}.${ext}`
-        const path = `${base}/${crypto.randomUUID()}.${ext}`
+        const path = `${base}/${uuid()}.${ext}`
         await uploadObject(path, i.blob, type)
         let thumbnail_path: string | null = null
         const thumb = await makeThumbnail(new File([i.blob], name, { type }))

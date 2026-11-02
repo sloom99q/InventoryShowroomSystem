@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { uuid } from '@/lib/uuid'
 import { ImageUp, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -45,7 +46,7 @@ function LogoField({ label, hint, path, companyId, onChange, dark, wide, onDark 
     try {
       const s = await validateFile(f, 'image')
       if (s.mime === 'image/heic') throw new Error(t('logoHint'))
-      const p = `${companyId}/branding/asset-${crypto.randomUUID()}.${s.ext}`
+      const p = `${companyId}/branding/asset-${uuid()}.${s.ext}`
       await uploadObject(p, f, s.mime)
       onChange(p)
       toast.success(t('logoUploaded'))

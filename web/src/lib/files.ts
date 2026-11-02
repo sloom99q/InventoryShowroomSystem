@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { uuid } from '@/lib/uuid'
 import i18n from '@/i18n'
 import { BUCKET, supabase } from './supabase'
 
@@ -36,7 +37,7 @@ export async function validateFile(file: File, accept: Accept): Promise<Sniffed>
 }
 
 export function objectPath(companyId: string, vehicleId: string, kind: string, ext: string) {
-  return `${companyId}/${vehicleId}/${kind}/${crypto.randomUUID()}.${ext}`
+  return `${companyId}/${vehicleId}/${kind}/${uuid()}.${ext}`
 }
 
 export async function uploadObject(path: string, body: Blob, contentType: string) {
