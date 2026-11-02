@@ -8,6 +8,18 @@ import './i18n'
 import { AuthProvider } from './lib/auth'
 import './index.css'
 
+// After an update the old page asks for screen files that no longer exist; load the new version
+// instead of getting stuck (at most once a minute, so a real outage can't loop).
+window.addEventListener('vite:preloadError', (e) => {
+  e.preventDefault()
+  try {
+    const last = Number(sessionStorage.getItem('reloaded-for-update') ?? 0)
+    if (Date.now() - last < 60_000) return
+    sessionStorage.setItem('reloaded-for-update', String(Date.now()))
+  } catch { /* storage blocked: reload anyway */ }
+  window.location.reload()
+})
+
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1, refetchOnWindowFocus: true } },
 })
