@@ -3,7 +3,7 @@ import { Archive, ArchiveRestore, ArrowLeftRight, ArrowRight, BadgeCheck, Eye, F
 import { useEffect, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAccessories, useDocuments, useExpenses, useImages } from '@/api/records'
 import { useArchiveVehicle, useChangeStatus, useUpdateVehicle, useVehicle } from '@/api/vehicles'
@@ -14,7 +14,7 @@ import { Field, Input, Textarea } from '@/components/ui/form'
 import { ErrorNote, PageLoader, Panel, Tabs } from '@/components/ui/misc'
 import { readiness, useFieldWriter, useVehicleData, type VehicleData } from '@/api/fields'
 import { cn } from '@/lib/cn'
-import { FIELDS, isListKey } from '@/lib/fields'
+import { isListKey } from '@/lib/fields'
 import { fromForm, toForm, VehicleFields, vehicleSchema, type VehicleForm } from '@/components/VehicleFields'
 import { Chassis, StatusBadge, VehicleThumb, vehicleTitle } from '@/components/vehicle-bits'
 import { useCompany } from '@/lib/auth'
@@ -40,6 +40,7 @@ export function VehicleDetail() {
   const { t } = useTranslation(['vehicle', 'common', 'salesdocs'])
   const { id } = useParams<{ id: string }>()
   const [params, setParams] = useSearchParams()
+  const nav = useNavigate()
   const raw = params.get('tab') ?? 'specs'
   const tab: Tab = (TABS as string[]).includes(raw) ? (raw as Tab) : OLD_TABS[raw] ?? 'specs'
   const { canWrite, company } = useCompany()
@@ -78,12 +79,12 @@ export function VehicleDetail() {
         ? t('header.accToCheck', { count: v.unknown_accessories })
         : t('header.accComplete')
 
-  /** Readiness item clicked: identity fields live in "Edit details", the rest in Specifications. */
-  const goTo = (key: string, rowId?: string) => {
-    if (FIELDS.identity.some((f) => f.key === key)) return setDialog('edit')
-    const next: Record<string, string> = { tab: 'specs', field: key }
-    if (rowId && isListKey(key)) next.item = rowId
-    setParams(next, { replace: true })
+  /** Readiness item clicked: open Fill specs at that field. */
+  const goTo = (key: string, rowId?: string, kind?: string) => {
+    const q = new URLSearchParams({ field: key })
+    if (kind === 'arabic') q.set('lang', 'ar')
+    if (rowId && isListKey(key)) q.set('item', rowId)
+    nav(`/vehicles/${v.id}/specs?${q}`)
   }
 
   return (
@@ -159,7 +160,7 @@ export function VehicleDetail() {
 
       <Tabs value={tab} onChange={(tb) => setParams(tb === 'specs' ? {} : { tab: tb }, { replace: true })} items={tabs} className="mt-6 mb-5" />
 
-      {tab === 'specs' && <SpecsTab vehicleId={v.id!} />}
+      {tab === 'specs' && <SpecsTab vehicle={v} />}
       {tab === 'photos' && <PhotosTab vehicleId={v.id!} />}
       {tab === 'documents' && <DocumentsTab vehicleId={v.id!} chassis={v.chassis_number!} />}
       {tab === 'accessories' && <AccessoriesTab vehicleId={v.id!} />}
@@ -210,7 +211,7 @@ function MoreMenu({ v, onPick }: { v: VehicleOverview; onPick: (d: 'edit' | 'cha
   )
 }
 
-function ReadinessBar({ v, data, onGo }: { v: VehicleOverview; data: VehicleData; onGo: (key: string, rowId?: string) => void }) {
+function ReadinessBar({ v, data, onGo }: { v: VehicleOverview; data: VehicleData; onGo: (key: string, rowId?: string, kind?: string) => void }) {
   const { t } = useTranslation('vehicle')
   const [open, setOpen] = useState(false)
   const r = readiness(v as never, data)
@@ -237,7 +238,7 @@ function ReadinessBar({ v, data, onGo }: { v: VehicleOverview; data: VehicleData
         <ul className="grid gap-x-6 border-t border-line-soft px-4 py-2 sm:grid-cols-2 lg:grid-cols-3">
           {r.gaps.map((g, i) => (
             <li key={`${g.kind}:${g.key}:${g.rowId ?? i}`}>
-              <button className="flex w-full items-center gap-2 py-1.5 text-start text-[13px] hover:text-accent" onClick={() => onGo(g.key, g.rowId)}>
+              <button className="flex w-full items-center gap-2 py-1.5 text-start text-[13px] hover:text-accent" onClick={() => onGo(g.key, g.rowId, g.kind)}>
                 <span className={cn('size-1.5 shrink-0 rounded-full', g.kind === 'empty' ? 'bg-ink-3' : 'bg-warn')} />
                 <span className="min-w-0 flex-1 truncate" dir="auto">{g.label}</span>
                 <span className="text-[12px] text-ink-3">{g.kind === 'empty' ? t('ready.emptyItem') : t('ready.arabicItem')}</span>

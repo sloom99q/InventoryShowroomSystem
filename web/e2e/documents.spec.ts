@@ -58,11 +58,12 @@ test('generates the spec sheet and brochure for the fictional car', async ({ pag
   await expect(page.getByText('Settings saved')).toBeVisible()
 
   const vehicleUrl = await importFictionalCar(page, [path.join(FX, 'car-photo.png')])
-  // Key features are written on the car page (English only), not imported.
+  // Key features are written on the Fill specs page (English only), not imported.
+  await page.goto(`${vehicleUrl}/specs`)
   for (const f of ['Panoramic glass roof', 'Heated front seats']) {
     await page.getByLabel('Add key feature').fill(f)
     await page.getByLabel('Add key feature').press('Enter')
-    await expect(page.getByText(f, { exact: true }).first()).toBeVisible()
+    await expect.poll(() => page.locator('#fill-section-key_features input[id^=fill-item]').evaluateAll((els) => els.map((e) => (e as HTMLInputElement).value))).toContain(f)
   }
   await page.goto(`${vehicleUrl}/documents`)
 
