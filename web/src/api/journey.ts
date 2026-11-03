@@ -16,10 +16,11 @@ export function refreshCar(qc: QueryClient, vehicleId?: string | null) {
   qc.invalidateQueries({ queryKey: ['dashboard'] })
   qc.invalidateQueries({ queryKey: ['chassis-search'] })
   if (vehicleId) {
-    for (const k of ['vehicle', 'journey', 'events', 'audit', 'images', 'accessories', 'expenses', 'documents', 'specs']) {
+    for (const k of ['vehicle', 'journey', 'events', 'audit', 'images', 'accessories', 'expenses', 'documents', 'specs', 'aftersales-car']) {
       qc.invalidateQueries({ queryKey: [k, vehicleId] })
     }
   }
+  qc.invalidateQueries({ queryKey: ['aftersales'] })
 }
 
 // --- Stages -----------------------------------------------------------------
@@ -198,7 +199,8 @@ export function useReorderPhotos(vehicleId: string) {
 
 // --- Realtime -----------------------------------------------------------------
 
-const TABLES = ['vehicles', 'vehicle_specs', 'vehicle_images', 'accessories', 'expenses', 'vehicle_events', 'documents', 'stages'] as const
+const TABLES = ['vehicles', 'vehicle_specs', 'vehicle_images', 'accessories', 'expenses', 'vehicle_events', 'documents', 'stages',
+  'customers', 'vehicle_owners', 'warranties', 'service_visits', 'part_requests', 'offers', 'message_log'] as const
 
 /**
  * One subscription for the whole app: any change to the company's cars (on this

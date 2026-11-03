@@ -2,7 +2,7 @@
 // This is the only place the service-role key is used, and it never leaves the server.
 import { createClient } from 'npm:@supabase/supabase-js@2'
 
-const ROLES = ['admin', 'secretary', 'staff', 'viewer']
+const ROLES = ['admin', 'sales_manager', 'secretary', 'technician', 'staff', 'viewer']
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',

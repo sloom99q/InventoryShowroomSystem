@@ -1,4 +1,4 @@
-import { CarFront, FileText, LogOut, Menu, Receipt, Settings, Upload, Users, X } from 'lucide-react'
+import { CarFront, FileText, HandHeart, LogOut, Menu, Receipt, Settings, Upload, Users, X } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet } from 'react-router-dom'
@@ -14,9 +14,10 @@ import { GlobalSearch } from './GlobalSearch'
 import { buttonVariants } from './ui/button'
 
 const NAV = [
-  { to: '/vehicles', key: 'cars', icon: CarFront },
-  { to: '/expenses', key: 'expenses', icon: Receipt },
-  { to: '/documents', key: 'documents', icon: FileText },
+  { to: '/vehicles', key: 'cars', icon: CarFront, roles: null },
+  { to: '/aftersales', key: 'aftersales', icon: HandHeart, roles: ['admin', 'sales_manager', 'secretary', 'technician'] },
+  { to: '/expenses', key: 'expenses', icon: Receipt, roles: ['admin', 'sales_manager', 'secretary', 'staff', 'viewer'] },
+  { to: '/documents', key: 'documents', icon: FileText, roles: ['admin', 'sales_manager', 'secretary', 'staff', 'viewer'] },
 ] as const
 const ADMIN_NAV = [
   { to: '/settings', key: 'settings', icon: Settings },
@@ -55,7 +56,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <CompanyLogo className="max-w-[200px]" />
       </div>
       <nav className="flex flex-1 flex-col gap-0.5 px-3 py-2" aria-label={t('nav.main')}>
-        {NAV.map(({ to, key, icon: Icon }) => (
+        {NAV.filter((n) => !n.roles || (n.roles as readonly string[]).includes(profile.role)).map(({ to, key, icon: Icon }) => (
           <NavLink key={to} to={to} className={link} onClick={onNavigate}>
             <Icon aria-hidden /> {t(`nav.${key}`)}
           </NavLink>

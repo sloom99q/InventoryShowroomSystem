@@ -2,6 +2,7 @@
 export default {
   appName: 'Showroom',
   nav: {
+    aftersales: 'After-Sales',
     cars: 'Cars',
     main: 'Main',
     dashboard: 'Dashboard',
@@ -106,7 +107,9 @@ export default {
   role: {
     admin: 'Admin',
     secretary: 'Secretary',
-    staff: 'Staff / technician',
+    sales_manager: 'Sales manager',
+    technician: 'Technician',
+    staff: 'Staff',
     viewer: 'Read-only',
   },
   time: {

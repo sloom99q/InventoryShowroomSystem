@@ -195,6 +195,16 @@ journey, not documents:
   (`useRealtimeSync`) and refreshes whatever shows the changed car.
 - Lottie animations in `web/public/lottie/` are original (see `LICENSES.md`).
 
+## After-Sales (branch `aftersales`)
+
+Design target: `rebuild-v3/AFTERSALES.md` + `aftersales.html`. For every Sold/Delivered car:
+customer & handover, warranty (auto-filled from Settings per brand), service (next due by months
+or km, whichever first), parts (technician requests: requested → ordered → arrived → fitted),
+offers from a catalogue, and WhatsApp reminders (free click-to-chat `wa.me`, every send logged).
+Roles: `sales_manager` (everything), `technician` (service and parts only — reads price- and
+phone-free views, writes through checked functions), secretary reads. Settings:
+`/aftersales/settings`.
+
 ## Deploying (private web app)
 
 1. Create a Supabase project (region: closest to UAE, e.g. `ap-south-1` Mumbai / `eu-central-1`).

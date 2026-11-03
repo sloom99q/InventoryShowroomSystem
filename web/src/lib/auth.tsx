@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading: !ready || (!!userId && (me.isPending || me.isFetching) && !me.data),
     profile,
     company,
-    canWrite: role === 'admin' || role === 'secretary' || role === 'staff',
+    canWrite: role === 'admin' || role === 'secretary' || role === 'staff' || role === 'sales_manager',
     isAdmin: role === 'admin',
     canEditChassis: role === 'admin' || role === 'secretary',
     setLocale,

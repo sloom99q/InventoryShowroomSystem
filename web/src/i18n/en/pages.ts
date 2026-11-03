@@ -113,7 +113,9 @@ export default {
     accessUpdated: 'Access updated',
     roleHelp: {
       admin: 'Everything, including staff accounts and settings',
-      secretary: 'Add and edit vehicles, correct chassis numbers, see change history',
+      secretary: 'Add and edit vehicles, correct chassis numbers; sees After-Sales',
+      sales_manager: 'Cars, plus all of After-Sales: customers, warranty, service, parts, offers, WhatsApp',
+      technician: 'After-Sales service and parts only; no customer phone numbers or prices',
       staff: 'Add photos, expenses and accessories; change status',
       viewer: 'Look only, no changes',
     },

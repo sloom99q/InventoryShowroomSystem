@@ -23,4 +23,4 @@ export const EXPENSE_LABEL = translated<ExpenseCategory>(
   ['mechanical', 'electrical', 'bodywork', 'paint', 'tires', 'maintenance', 'transportation', 'accessories', 'other'],
   'expenseCategory',
 )
-export const ROLE_LABEL = translated<AppRole>(['admin', 'secretary', 'staff', 'viewer'], 'role')
+export const ROLE_LABEL = translated<AppRole>(['admin', 'sales_manager', 'secretary', 'technician', 'staff', 'viewer'], 'role')
