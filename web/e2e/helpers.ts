@@ -29,6 +29,27 @@ export function randomChassis() {
 
 export const SECRETARY = { email: 'e2e-secretary@showroom.local', password: 'Secretary!2026x' }
 
+/** Log in as any role (the account is created once through Staff & access by the admin). */
+export async function loginAs(page: Page, role: 'secretary' | 'sales_manager' | 'technician') {
+  if (role === 'secretary') return loginSecretary(page)
+  const acc = { email: `e2e-${role.replace('_', '-')}@showroom.local`, password: 'E2eRole!2026x', full_name: role === 'technician' ? 'Ravi Tech' : 'Khalid Manager' }
+  await login(page)
+  await page.evaluate(async ({ acc, role }) => {
+    const { supabase } = await import('/src/lib/supabase.ts')
+    await supabase.functions.invoke('manage-staff', { body: { ...acc, role } })
+  }, { acc, role })
+  await page.evaluate(async () => { const { supabase } = await import('/src/lib/supabase.ts'); await supabase.auth.signOut() })
+  await page.goto('/')
+  await page.locator('input[type=email]').fill(acc.email)
+  await page.locator('input[type=password]').fill(acc.password)
+  await page.locator('button[type=submit]').click()
+  await expect(page.locator('main')).toBeVisible()
+  if ((await page.locator('html').getAttribute('lang')) !== 'en') {
+    await page.locator('aside button[lang=en]').last().click()
+    await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  }
+}
+
 /** Log in as a secretary (created once through Staff & access by the admin). */
 export async function loginSecretary(page: Page) {
   await login(page)

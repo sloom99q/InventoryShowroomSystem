@@ -6,6 +6,7 @@ import type en from '../en/common'
 const ar: Messages<typeof en> = {
   appName: 'Showroom',
   nav: {
+    aftersales: 'ما بعد البيع',
     cars: 'السيارات',
     main: 'القائمة الرئيسية',
     dashboard: 'لوحة التحكم',
@@ -108,7 +109,9 @@ const ar: Messages<typeof en> = {
   role: {
     admin: 'مدير النظام',
     secretary: 'سكرتيرة',
-    staff: 'موظف / فني',
+    sales_manager: 'مدير المبيعات',
+    technician: 'فني',
+    staff: 'موظف',
     viewer: 'اطلاع فقط',
   },
   time: {

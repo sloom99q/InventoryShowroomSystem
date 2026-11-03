@@ -8,6 +8,9 @@ import CarsPage from '@/pages/cars/CarsPage'
 
 const AddCar = lazy(() => import('@/pages/cars/AddCar'))
 const CarPage = lazy(() => import('@/pages/car/CarPage'))
+const AftersalesHome = lazy(() => import('@/pages/aftersales/AftersalesHome'))
+const AftersalesCar = lazy(() => import('@/pages/aftersales/AftersalesCar'))
+const AftersalesSettings = lazy(() => import('@/pages/aftersales/AftersalesSettings'))
 const Documents = lazy(() => import('@/pages/Documents'))
 const Expenses = lazy(() => import('@/pages/Expenses'))
 const ImportExport = lazy(() => import('@/pages/ImportExport'))
@@ -27,6 +30,7 @@ export default function App() {
   if (loading) return <PageLoader />
   if (!session) return <Login />
   if (!profile?.active || !company) return <NoAccess />
+  const aftersales = ['admin', 'sales_manager', 'secretary', 'technician'].includes(profile.role)
 
   return (
     <BrowserRouter>
@@ -41,6 +45,9 @@ export default function App() {
             {isAdmin && <Route path="vehicles/:id/import" element={<ImportFiles key="existing" />} />}
             <Route path="vehicles/:id/specs" element={<ToSpecs />} />
             <Route path="vehicles/:id/documents" element={<SalesDocuments />} />
+            {aftersales && <Route path="aftersales" element={<AftersalesHome />} />}
+            {aftersales && <Route path="aftersales/:id" element={<AftersalesCar />} />}
+            {(isAdmin || profile.role === 'sales_manager') && <Route path="aftersales/settings" element={<AftersalesSettings />} />}
             <Route path="documents" element={<Documents />} />
             <Route path="expenses" element={<Expenses />} />
             {isAdmin && <Route path="import" element={<ImportExport />} />}

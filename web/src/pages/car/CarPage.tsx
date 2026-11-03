@@ -16,7 +16,7 @@ import { useSignedUrl } from '@/lib/files'
 import { useCompany } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 import { fmtDate, fmtMoney, fromLocalInput, nowLocalInput, parseAmount } from '@/lib/format'
-import { friendlyError } from '@/lib/supabase'
+import { friendlyError, supabase } from '@/lib/supabase'
 import type { VehicleOverview } from '@/lib/types'
 import { useStageName } from '@/lib/stageName'
 import { ArchiveDialog, ChassisDialog, DeleteDialog } from './dialogs'
@@ -105,7 +105,8 @@ function Badge({ children, tone }: { children: React.ReactNode; tone?: 'danger' 
 
 function Hero({ v }: { v: VehicleOverview }) {
   const { t } = useTranslation('cars')
-  const { canWrite } = useCompany()
+  const { canWrite, profile } = useCompany()
+  const aftersales = ['admin', 'sales_manager', 'secretary', 'technician'].includes(profile.role)
   const stageName = useStageName()
   const save = useSaveCar(v.id!)
   const [copied, setCopied] = useState(false)
@@ -130,6 +131,11 @@ function Hero({ v }: { v: VehicleOverview }) {
         </button>
         {copied && <span className="text-[13px] text-ok" role="status">{t('car.copied')}</span>}
       </div>
+      {(v.status === 'sold' || v.status === 'delivered') && aftersales && (
+        <Link to={`/aftersales/${v.id}`} className="float-end mt-3 inline-flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-1.5 text-[14px] font-semibold text-accent hover:bg-accent/15" data-testid="to-aftersales">
+          {t('car.toAftersales')}<ArrowRight className="size-4 flip-rtl" />
+        </Link>
+      )}
       <p className="mt-3 text-[19px] sm:text-[21px]">
         <span className="font-semibold">{[v.brand?.toUpperCase(), v.model, v.year].filter(Boolean).join(' ') || t('car.noName')}</span>
         {sub && <span className="text-ink-3"> · {sub}</span>}
@@ -302,10 +308,18 @@ function MoveDialog({ v, to, current, onClose }: { v: VehicleOverview; to: Stage
   const move = useMoveStage(v.id!)
   const [at, setAt] = useState(nowLocalInput())
   const [note, setNote] = useState('')
+  const delivering = to.status === 'delivered'
+  const [handover, setHandover] = useState(true)
   const back = current && to.position < current.position
   const needsDate = to.status === 'sold' || to.status === 'delivered'
   const go = () => move.mutate({ stageId: to.id, at: fromLocalInput(at) ?? new Date().toISOString(), note: note.trim() }, {
-    onSuccess: () => { toast.success(t('journey.moved', { stage: stageName(to) })); onClose() },
+    onSuccess: async () => {
+      if (delivering && handover) {
+        const { error } = await supabase.rpc('check_handover', { p_vehicle_id: v.id! })
+        if (error) toast.error(friendlyError(error))
+      }
+      toast.success(t('journey.moved', { stage: stageName(to) })); onClose()
+    },
     onError: (e) => toast.error(friendlyError(e)),
   })
   return (
@@ -325,6 +339,12 @@ function MoveDialog({ v, to, current, onClose }: { v: VehicleOverview; to: Stage
           <span className="text-[13.5px] font-semibold text-ink-2">{t('journey.note')} <span className="font-normal text-ink-3">({t('add.optional')})</span></span>
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('journey.notePh')} className="h-11 rounded-xl border border-line px-3 outline-none focus:border-ink" />
         </label>
+        {delivering && (
+          <label className="flex items-start gap-2.5 rounded-xl bg-ok/[0.06] px-3 py-2.5 text-[14px]">
+            <input type="checkbox" checked={handover} onChange={(e) => setHandover(e.target.checked)} className="mt-0.5 size-4" data-testid="handover-check" />
+            <span><b>{t('journey.handover')}</b><span className="block text-[13px] text-ink-2">{t('journey.handoverHint')}</span></span>
+          </label>
+        )}
         <button type="submit" className="hidden" />
       </form>
     </Dialog>
