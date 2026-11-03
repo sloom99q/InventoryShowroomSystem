@@ -1,12 +1,11 @@
 // Add car: five short steps — chassis, car, arrival, photos, done. Specs come later, on the car page.
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, ArrowLeft, ArrowRight, Camera, Check, ChevronLeft, ImagePlus, X } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, ArrowRight, Camera, Check, ChevronLeft, ImagePlus, Loader2, RotateCw, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { refreshCar } from '@/api/journey'
-import { useUploadImages } from '@/api/records'
 import { findByChassis } from '@/api/vehicles'
 import { Button } from '@/components/ui/button'
 import { Anim } from '@/components/v3/bits'
@@ -15,6 +14,7 @@ import { cn } from '@/lib/cn'
 import { fromLocalInput, nowLocalInput, parseAmount } from '@/lib/format'
 import { friendlyError, supabase } from '@/lib/supabase'
 import { normalizeChassis, VIN_LENGTH } from '@/lib/vin'
+import { type PhotoItem, type PhotoQueue, usePhotoQueue } from '@/lib/photoQueue'
 
 const STEPS = ['chassis', 'car', 'arrival', 'photos', 'done'] as const
 type Step = (typeof STEPS)[number]
@@ -39,9 +39,12 @@ export default function AddCar() {
   const [step, setStep] = useState<Step>('chassis')
   const [d, setD] = useState<Draft>(() => ({ chassis: '', brand: '', model: '', year: String(thisYear), trim: '', color: '', price: '', arrivedAt: nowLocalInput(), location: '', mileage: '' }))
   const [carId, setCarId] = useState<string | null>(null)
+  const { company } = useCompany()
+  // Kept here so uploads go on while she moves to the last step.
+  const [queueKey, setQueueKey] = useState(0)
   const set = (k: keyof Draft) => (v: string) => setD((x) => ({ ...x, [k]: v }))
   const i = STEPS.indexOf(step)
-  const reset = () => { setD({ chassis: '', brand: '', model: '', year: String(thisYear), trim: '', color: '', price: '', arrivedAt: nowLocalInput(), location: '', mileage: '' }); setCarId(null); setStep('chassis') }
+  const reset = () => { setQueueKey((k) => k + 1); setD({ chassis: '', brand: '', model: '', year: String(thisYear), trim: '', color: '', price: '', arrivedAt: nowLocalInput(), location: '', mileage: '' }); setCarId(null); setStep('chassis') }
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -59,15 +62,23 @@ export default function AddCar() {
         ))}
       </ol>
 
+      <PhotoQueueHost key={queueKey} companyId={company.id} carId={carId}>{(photos) => (
       <div className="card p-6 sm:p-8">
         {step === 'chassis' && <ChassisStep value={d.chassis} onChange={set('chassis')} onNext={() => setStep('car')} />}
         {step === 'car' && <CarStep d={d} set={set} onBack={() => setStep('chassis')} onNext={() => setStep('arrival')} />}
         {step === 'arrival' && <ArrivalStep d={d} set={set} onBack={() => setStep('car')} onCreated={(id) => { setCarId(id); setStep('photos') }} />}
-        {step === 'photos' && carId && <PhotosStep carId={carId} onDone={() => setStep('done')} />}
-        {step === 'done' && carId && <DoneStep chassis={normalizeChassis(d.chassis)} carId={carId} onAnother={reset} />}
+        {step === 'photos' && carId && <PhotosStep q={photos} onDone={() => setStep('done')} />}
+        {step === 'done' && carId && <DoneStep chassis={normalizeChassis(d.chassis)} carId={carId} q={photos} onAnother={reset} />}
       </div>
+      )}</PhotoQueueHost>
     </div>
   )
+}
+
+/** Owns the photo queue for one car being added (a new car starts a new queue). */
+function PhotoQueueHost({ companyId, carId, children }: { companyId: string; carId: string | null; children: (q: PhotoQueue) => React.ReactNode }) {
+  const q = usePhotoQueue(companyId, carId, 'arrival')
+  return <>{children(q)}</>
 }
 
 function Title({ title, sub }: { title: string; sub: string }) {
@@ -250,36 +261,17 @@ function ArrivalStep({ d, set, onBack, onCreated }: { d: Draft; set: (k: keyof D
 
 // 4. Photos ---------------------------------------------------------------------
 
-function PhotosStep({ carId, onDone }: { carId: string; onDone: () => void }) {
+function PhotosStep({ q, onDone }: { q: PhotoQueue; onDone: () => void }) {
   const { t } = useTranslation('cars')
-  const { company } = useCompany()
-  const up = useUploadImages(company.id, carId)
-  const [files, setFiles] = useState<File[]>([])
-  const [done, setDone] = useState(0)
   const camera = useRef<HTMLInputElement>(null)
   const pick = useRef<HTMLInputElement>(null)
-  const urls = useMemo(() => files.map((f) => URL.createObjectURL(f)), [files])
-  useEffect(() => () => urls.forEach((u) => URL.revokeObjectURL(u)), [urls])
-  const add = (l: FileList | null) => l && setFiles((f) => [...f, ...[...l].filter((x) => x.type.startsWith('image/') || /\.(heic|heif)$/i.test(x.name))])
-  const upload = () => up.mutate({ files, type: 'arrival', onProgress: setDone }, {
-    onSuccess: onDone,
-    onError: (e) => toast.error(friendlyError(e)),
-  })
   return (
     <div>
       <Title title={t('add.photosTitle')} sub={t('add.photosSub')} />
-      <input ref={camera} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { add(e.target.files); e.target.value = '' }} data-testid="camera-input" />
-      <input ref={pick} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={(e) => { add(e.target.files); e.target.value = '' }} data-testid="photo-input" />
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {urls.map((u, k) => (
-          <div key={u} className="group relative aspect-[4/3] overflow-hidden rounded-xl bg-hover">
-            <img src={u} alt={files[k].name} className="size-full object-cover" />
-            {!up.isPending && (
-              <button className="absolute end-1.5 top-1.5 flex size-7 items-center justify-center rounded-full bg-black/55 text-white" aria-label={t('add.removePhoto', { name: files[k].name })}
-                onClick={() => setFiles((f) => f.filter((_, j) => j !== k))}><X className="size-4" /></button>
-            )}
-          </div>
-        ))}
+      <input ref={camera} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { q.add(e.target.files); e.target.value = '' }} data-testid="camera-input" />
+      <input ref={pick} type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={(e) => { q.add(e.target.files); e.target.value = '' }} data-testid="photo-input" />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4" data-testid="photo-grid">
+        {q.items.map((x) => <PhotoTile key={x.key} x={x} onRetry={() => q.retry(x.key)} onRemove={() => q.remove(x.key)} />)}
         <button onClick={() => camera.current?.click()} className="flex aspect-[4/3] flex-col items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-dashed border-line text-[13.5px] font-medium text-ink-2 hover:border-ink-3 hover:text-ink">
           <Camera className="size-6" />{t('add.takePhoto')}
         </button>
@@ -287,19 +279,48 @@ function PhotosStep({ carId, onDone }: { carId: string; onDone: () => void }) {
           <ImagePlus className="size-6" />{t('add.choosePhotos')}
         </button>
       </div>
+      {q.items.length > 0 && (
+        <p className="mt-3 text-[13.5px] text-ink-2" aria-live="polite" data-testid="photo-status">
+          {q.pending ? t('add.photosUploading', { done: q.done, total: q.items.length }) : q.failed ? t('add.photosFailed', { count: q.failed }) : t('add.photosDone', { count: q.done })}
+        </p>
+      )}
       <div className="mt-8 flex items-center justify-between gap-3">
-        <Button variant="ghost" size="lg" onClick={onDone} disabled={up.isPending}>{t('add.skip')}</Button>
-        <Button variant="primary" size="lg" disabled={!files.length} loading={up.isPending} onClick={upload}>
-          {up.isPending ? t('add.uploading', { done: Math.min(done + 1, files.length), total: files.length }) : t('add.uploadPhotos', { count: files.length })}
-        </Button>
+        <span className="text-[13px] text-ink-3">{q.pending ? t('add.keepsUploading') : ''}</span>
+        <Button variant="primary" size="lg" onClick={onDone}>{q.items.length ? t('add.continue') : t('add.skip')}</Button>
       </div>
+    </div>
+  )
+}
+
+function PhotoTile({ x, onRetry, onRemove }: { x: PhotoItem; onRetry: () => void; onRemove: () => void }) {
+  const { t } = useTranslation('cars')
+  const busy = x.status === 'uploading' || x.status === 'preparing' || x.status === 'waiting'
+  return (
+    <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-hover" data-photo-state={x.status} title={x.error ?? x.name}>
+      {x.preview
+        ? <img src={x.preview} alt={x.name} className={cn('size-full object-cover transition-opacity', busy && 'opacity-80')} />
+        : <span className="flex size-full flex-col items-center justify-center gap-1 text-[12px] text-ink-3"><Loader2 className="size-5 animate-spin" />{t('add.converting')}</span>}
+      <span className={cn('absolute start-1.5 bottom-1.5 flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11.5px] font-semibold',
+        x.status === 'done' ? 'bg-ok text-white' : x.status === 'failed' ? 'bg-danger text-white' : 'bg-black/60 text-white')}>
+        {x.status === 'done' ? <><Check className="size-3.5" strokeWidth={3} />{t('add.photoDone')}</>
+          : x.status === 'failed' ? t('add.photoFailed')
+            : <><Loader2 className="size-3 animate-spin" />{x.status === 'waiting' ? t('add.photoWaiting') : t('add.photoUploading')}</>}
+      </span>
+      {x.status === 'failed' && (
+        <button onClick={onRetry} className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/35 text-[14px] font-semibold text-white" aria-label={t('add.retry', { name: x.name })}>
+          <RotateCw className="size-4" />{t('add.retryShort')}
+        </button>
+      )}
+      {(x.status === 'waiting' || x.status === 'failed') && (
+        <button className="absolute end-1.5 top-1.5 flex size-7 items-center justify-center rounded-full bg-black/55 text-white" aria-label={t('add.removePhoto', { name: x.name })} onClick={onRemove}><X className="size-4" /></button>
+      )}
     </div>
   )
 }
 
 // 5. Done -----------------------------------------------------------------------
 
-function DoneStep({ chassis, carId, onAnother }: { chassis: string; carId: string; onAnother: () => void }) {
+function DoneStep({ chassis, carId, q, onAnother }: { chassis: string; carId: string; q: PhotoQueue; onAnother: () => void }) {
   const { t } = useTranslation('cars')
   const nav = useNavigate()
   return (
@@ -307,6 +328,12 @@ function DoneStep({ chassis, carId, onAnother }: { chassis: string; carId: strin
       <Anim name="success" className="size-28" label={t('add.added')} />
       <h1 className="mt-2 text-[22px] font-bold">{t('add.added')}</h1>
       <p className="vin mt-1 text-[15px] font-semibold tracking-[0.08em] text-ink-2">{chassis}</p>
+      {q.items.length > 0 && (
+        <p className={cn('mt-3 flex items-center gap-1.5 text-[14px]', q.failed ? 'text-danger' : q.pending ? 'text-ink-2' : 'text-ok')} aria-live="polite" data-testid="done-photos">
+          {q.pending ? <><Loader2 className="size-4 animate-spin" />{t('add.photosBackground', { count: q.pending })}</>
+            : q.failed ? t('add.photosFailedDone', { count: q.failed }) : <><Check className="size-4" />{t('add.photosDone', { count: q.done })}</>}
+        </p>
+      )}
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Button size="lg" onClick={onAnother}>{t('add.another')}</Button>
         <Button variant="primary" size="lg" onClick={() => nav(`/vehicles/${carId}`)} autoFocus>{t('add.openCar')}<ArrowRight className="flip-rtl" /></Button>

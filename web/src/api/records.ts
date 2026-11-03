@@ -1,6 +1,6 @@
 // Documents, images, accessories, expenses, timeline and audit for one vehicle.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { objectPath, uploadImage, uploadObject, validateFile } from '@/lib/files'
+import { objectPath, preparePhoto, uploadImage, uploadObject, validateFile } from '@/lib/files'
 import { supabase } from '@/lib/supabase'
 import type { AccessoryType, DocumentType, ExpenseCategory, ImageType, ItemStatus } from '@/lib/types'
 
@@ -107,7 +107,8 @@ export function useUploadImages(companyId: string, vehicleId: string) {
   return useMutation({
     mutationFn: async (p: { files: File[]; type: ImageType; onProgress?: (done: number) => void }) => {
       let done = 0
-      for (const file of p.files) {
+      for (const original of p.files) {
+        const file = await preparePhoto(original) // HEIC → JPEG, 12 MP → 2560 px
         const up = await uploadImage(companyId, vehicleId, p.type === 'information_card' ? 'card' : 'photos', file)
         if (p.type === 'information_card') {
           const { error } = await supabase.rpc('set_information_card', {

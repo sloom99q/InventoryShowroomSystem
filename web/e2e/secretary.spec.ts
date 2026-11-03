@@ -27,7 +27,8 @@ test('secretary: add a car with 2 photos in under a minute, then RTA, NFC missin
   await page.getByLabel('Mileage (km)').fill('12')
   await page.getByRole('button', { name: 'Save car' }).click()
   await page.getByTestId('photo-input').setInputFiles(PHOTOS)
-  await page.getByRole('button', { name: 'Upload 2 photos' }).click()
+  await expect(page.locator('[data-photo-state=done]')).toHaveCount(2, { timeout: 60_000 })
+  await page.getByRole('button', { name: 'Continue' }).click()
   await expect(page.getByRole('heading', { name: 'Car added' })).toBeVisible({ timeout: 30_000 })
   const addSeconds = (Date.now() - t0) / 1000
   await page.screenshot({ path: path.resolve(import.meta.dirname, '../../verify-out/v3/4-add-done.png') })

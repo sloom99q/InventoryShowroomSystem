@@ -58,7 +58,8 @@ export async function addCarByHand(page: Page, car: { brand?: string; model?: st
   await expect(page.getByRole('heading', { name: 'Arrival photos' })).toBeVisible()
   if (car.photos?.length) {
     await page.getByTestId('photo-input').setInputFiles(car.photos)
-    await page.getByRole('button', { name: /^Upload \d+ photos?$/ }).click()
+    await expect(page.locator('[data-photo-state=done]')).toHaveCount(car.photos.length, { timeout: 60_000 })
+    await page.getByRole('button', { name: 'Continue' }).click()
   } else {
     await page.getByRole('button', { name: 'Skip' }).click()
   }

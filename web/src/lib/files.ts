@@ -61,6 +61,34 @@ export async function makeThumbnail(file: File, max = 640): Promise<Blob | null>
   }
 }
 
+/**
+ * Make a phone photo ready to upload: HEIC becomes JPEG (only Safari can show HEIC), and
+ * large photos (12 MP and up) are scaled to 2560 px so they upload quickly on mobile data.
+ * Orientation from the camera is applied. Returns the file unchanged when nothing is needed.
+ */
+export async function preparePhoto(file: File, maxSide = 2560): Promise<File> {
+  const kind = await sniffFile(file)
+  let f = file
+  if (kind?.mime === 'image/heic') {
+    const { default: heic2any } = await import('heic2any')
+    const out = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 })
+    const blob = Array.isArray(out) ? out[0] : out
+    f = new File([blob], file.name.replace(/\.(heic|heif)$/i, '') + '.jpg', { type: 'image/jpeg' })
+  }
+  try {
+    const bmp = await createImageBitmap(f, { imageOrientation: 'from-image' })
+    const scale = Math.min(1, maxSide / Math.max(bmp.width, bmp.height))
+    if (scale >= 1) { bmp.close(); return f }
+    const canvas = new OffscreenCanvas(Math.round(bmp.width * scale), Math.round(bmp.height * scale))
+    canvas.getContext('2d')!.drawImage(bmp, 0, 0, canvas.width, canvas.height)
+    bmp.close()
+    const blob = await canvas.convertToBlob({ type: 'image/jpeg', quality: 0.86 })
+    return new File([blob], f.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' })
+  } catch {
+    return f
+  }
+}
+
 /** Upload an image and its thumbnail. Returns the storage paths. */
 export async function uploadImage(companyId: string, vehicleId: string, kind: string, file: File) {
   const s = await validateFile(file, 'image')
