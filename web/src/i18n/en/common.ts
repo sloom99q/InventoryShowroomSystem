@@ -72,6 +72,8 @@ export default {
     registration: 'Registration',
     inspection: 'Inspection',
     purchase: 'Purchase',
+    warranty_certificate: 'Warranty certificate',
+    warranty_terms: 'Warranty terms',
     other: 'Other',
   },
   imageType: {

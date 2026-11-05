@@ -74,6 +74,8 @@ const ar: Messages<typeof en> = {
     registration: 'التسجيل',
     inspection: 'الفحص',
     purchase: 'الشراء',
+    warranty_certificate: 'شهادة الضمان',
+    warranty_terms: 'شروط الضمان',
     other: 'أخرى',
   },
   imageType: {

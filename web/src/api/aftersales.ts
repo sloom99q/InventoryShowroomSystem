@@ -54,19 +54,40 @@ export function useAftersalesHome() {
         ? ok(await supabase.from('vehicle_owners').select('vehicle_id, customers(full_name, phone, language)').is('to_date', null).in('vehicle_id', ids))
         : []
       const warranties = role.seesCustomers && ids.length ? ok(await supabase.from('warranties').select('vehicle_id').in('vehicle_id', ids)) : []
+      const since = new Date(Date.now() - 8 * 7 * 86_400_000).toISOString()
       const parts = role.manager || role.seesCustomers
         ? ok(await supabase.from('part_requests').select('id, vehicle_id, status, cost').in('status', ['requested', 'ordered', 'arrived']))
         : ok(await supabase.from('part_requests_tech').select('id, vehicle_id, status').in('status', ['requested', 'ordered', 'arrived']))
       const offers = role.seesCustomers ? ok(await supabase.from('offers').select('id, price').eq('status', 'offered')) : []
+      // Last 8 weeks, for the trend lines on the cards.
+      const visitDates = (role.seesCustomers
+        ? ok(await supabase.from('service_visits').select('visit_date').gte('visit_date', since.slice(0, 10)))
+        : ok(await supabase.from('service_visits_tech').select('visit_date').gte('visit_date', since.slice(0, 10)))).map((r) => r.visit_date!)
+      const partDates = (role.seesCustomers
+        ? ok(await supabase.from('part_requests').select('requested_at').gte('requested_at', since))
+        : ok(await supabase.from('part_requests_tech').select('requested_at').gte('requested_at', since))).map((r) => r.requested_at!)
+      const offerDates = role.seesCustomers ? ok(await supabase.from('offers').select('offered_at').gte('offered_at', since)).map((r) => r.offered_at) : []
+      const deliveryDates = cars.map((c) => c.delivered_at ?? c.sold_at).filter((d): d is string => !!d && d >= since)
       return {
         reminders, cars,
         owner: new Map(owners.map((o) => [o.vehicle_id!, o.full_name!])),
         contact: new Map((phones as unknown as { vehicle_id: string; customers: { full_name: string; phone: string | null; language: string } }[]).map((o) => [o.vehicle_id, o.customers])),
         hasWarranty: new Set(warranties.map((w) => w.vehicle_id)),
         parts, offers,
+        trend: { visits: weekly(visitDates), parts: weekly(partDates), offers: weekly(offerDates), deliveries: weekly(deliveryDates) },
       }
     },
   })
+}
+
+/** Counts per week for the last 8 weeks (oldest first). */
+export function weekly(dates: string[], now = Date.now()) {
+  const out = Array<number>(8).fill(0)
+  for (const d of dates) {
+    const w = Math.floor((now - new Date(d).getTime()) / (7 * 86_400_000))
+    if (w >= 0 && w < 8) out[7 - w]++
+  }
+  return out
 }
 
 // --- One customer's car ------------------------------------------------------------------
