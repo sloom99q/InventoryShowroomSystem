@@ -122,15 +122,22 @@ function Hero({ v }: { v: VehicleOverview }) {
   const sub = [v.trim_level, v.exterior_color].filter(Boolean).join(' · ')
   return (
     <section className="card relative p-6 sm:p-7">
-      <div className="absolute end-5 top-5"><CarMenu v={v} /></div>
+      <div className="absolute end-5 top-5 flex items-center gap-2">
+        <Link to={`/vehicles/${v.id}/documents`} data-testid="sheet-button"
+          className="inline-flex h-10 items-center gap-2 rounded-xl bg-accent px-3.5 text-[14px] font-semibold text-accent-ink shadow-[0_2px_8px_color-mix(in_srgb,var(--brand)_25%,transparent)] hover:brightness-95">
+          <FileText className="size-4" /><span className="hidden sm:inline">{t('car.sheetTitle')}</span>
+        </Link>
+        <CarMenu v={v} />
+      </div>
       <p className="text-[11.5px] font-semibold tracking-[0.1em] text-ink-3 uppercase">{t('car.chassisLabel')}</p>
-      <div className="mt-1.5 flex flex-wrap items-center gap-3 pe-12">
+      <div className="mt-1.5 flex flex-wrap items-center gap-3 pe-24 sm:pe-64">
         <h1 className="vin text-[26px] font-bold tracking-[0.1em] break-all sm:text-[34px]" data-testid="chassis-hero">{v.chassis_number}</h1>
         <button onClick={copy} className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-line text-ink-2 hover:bg-hover" aria-label={t('car.copyChassis')}>
           {copied ? <Check className="size-4 text-ok" /> : <Copy className="size-4" />}
         </button>
         {copied && <span className="text-[13px] text-ok" role="status">{t('car.copied')}</span>}
       </div>
+      <ChassisCheck v={v} />
       {(v.status === 'sold' || v.status === 'delivered') && aftersales && (
         <Link to={`/aftersales/${v.id}`} className="float-end mt-3 inline-flex items-center gap-1.5 rounded-lg bg-accent/10 px-3 py-1.5 text-[14px] font-semibold text-accent hover:bg-accent/15" data-testid="to-aftersales">
           {t('car.toAftersales')}<ArrowRight className="size-4 flip-rtl" />
@@ -154,6 +161,25 @@ function Hero({ v }: { v: VehicleOverview }) {
           : <button onClick={() => setAdding(true)} className="inline-flex h-6 items-center gap-1 rounded-md border border-dashed border-line px-2 text-[12px] font-medium text-ink-3 hover:border-ink-3 hover:text-ink-2"><Plus className="size-3" />{t('car.label')}</button>)}
       </div>
     </section>
+  )
+}
+
+/** Has someone compared the chassis number with the car's papers? */
+function ChassisCheck({ v }: { v: VehicleOverview }) {
+  const { t } = useTranslation('cars')
+  const { canWrite } = useCompany()
+  const save = useSaveCar(v.id!)
+  const flip = () => save.mutate({ chassis_verified: !v.chassis_verified }, {
+    onSuccess: () => toast.success(v.chassis_verified ? t('car.uncheckedToast') : t('car.checkedToast')),
+    onError: (e) => toast.error(friendlyError(e)),
+  })
+  return (
+    <p className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[13.5px]" data-testid="chassis-check" data-checked={v.chassis_verified ? 'yes' : 'no'}>
+      {v.chassis_verified
+        ? <span className="inline-flex items-center gap-1 text-ok"><Check className="size-3.5" />{t('car.chassisChecked')}</span>
+        : <span className="text-warn">{t('car.chassisNotChecked')}</span>}
+      {canWrite && <button onClick={flip} disabled={save.isPending} className="text-ink-3 underline underline-offset-2 hover:text-ink">{v.chassis_verified ? t('car.undo') : t('car.markChecked')}</button>}
+    </p>
   )
 }
 

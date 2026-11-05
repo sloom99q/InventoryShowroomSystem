@@ -1,7 +1,8 @@
 // Cars: chassis first, where each car is (stage), and what needs attention.
 import { useQuery } from '@tanstack/react-query'
-import { Archive, Plus } from 'lucide-react'
-import { useMemo } from 'react'
+import { Archive, Download, Plus } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useStages } from '@/api/journey'
@@ -45,7 +46,6 @@ export function matchesSearch(v: Car, term: string) {
 
 export default function CarsPage() {
   const { t } = useTranslation('cars')
-  const { canWrite } = useCompany()
   const nav = useNavigate()
   const [params, setParams] = useSearchParams()
   const stage = params.get('stage') ?? 'all'
@@ -70,6 +70,21 @@ export default function CarsPage() {
     return m
   }, [searched])
   const attention = (cars.data ?? []).filter((v) => attentionTags(v).length).length
+  const { company, canWrite } = useCompany()
+  const [exporting, setExporting] = useState(false)
+  // The cars shown (stage and search applied) as an Excel file.
+  const exportExcel = async () => {
+    setExporting(true)
+    try {
+      const { exportVehicles } = await import('@/lib/excel')
+      await exportVehicles(shown, company.currency)
+      toast.success(t('list.exported', { count: shown.length }))
+    } catch (e) {
+      toast.error((e as Error).message)
+    } finally {
+      setExporting(false)
+    }
+  }
 
   if (cars.isLoading || stages.isLoading) return <PageLoader />
   if (cars.error) return <ErrorNote error={cars.error} />
@@ -94,7 +109,10 @@ export default function CarsPage() {
         {(stages.data ?? []).map((s) => (
           <Chip key={s.id} on={stage === s.id} onClick={() => set('stage', s.id)} label={stageName(s)} count={counts.get(s.id) ?? 0} color={s.color} />
         ))}
-        <button onClick={() => { set('archived', archived ? null : '1'); }} className={cn('ms-auto inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13px] text-ink-3 hover:text-ink', archived && 'text-ink')}>
+        <button onClick={exportExcel} disabled={exporting} className="ms-auto inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13px] text-ink-3 hover:text-ink disabled:opacity-50" data-testid="export-excel">
+          <Download className="size-3.5" /> {t('list.exportExcel')}
+        </button>
+        <button onClick={() => { set('archived', archived ? null : '1'); }} className={cn('inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13px] text-ink-3 hover:text-ink', archived && 'text-ink')}>
           <Archive className="size-3.5" /> {archived ? t('list.backToCars') : t('list.archived')}
         </button>
       </div>

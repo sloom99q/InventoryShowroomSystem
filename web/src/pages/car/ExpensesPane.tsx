@@ -98,12 +98,13 @@ function QuickAdd({ v, category, onDone }: { v: VehicleOverview; category: Expen
   const [supplier, setSupplier] = useState('')
   const [note, setNote] = useState('')
   const [receipt, setReceipt] = useState<File | null>(null)
+  const [date, setDate] = useState(todayDubai())
   const file = useRef<HTMLInputElement>(null)
   const parsed = parseAmount(amount)
   const go = () => {
     if (!parsed || Number(parsed) <= 0) return
     save.mutate({ draft: {
-      title: title.trim() || tr(t, `exp.cat.${category}`), category, amount: parsed, expense_date: todayDubai(),
+      title: title.trim() || tr(t, `exp.cat.${category}`), category, amount: parsed, expense_date: date || todayDubai(),
       supplier_name: supplier.trim() || null, description: note.trim() || null, receipt,
     } }, {
       onSuccess: () => { toast.success(t('exp.added', { amount: fmtMoney(parsed), type: tr(t, `exp.cat.${category}`) })); onDone() },
@@ -126,6 +127,7 @@ function QuickAdd({ v, category, onDone }: { v: VehicleOverview; category: Expen
       {more ? (
         <div className="grid gap-2 sm:grid-cols-2">
           <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('exp.titlePh')} className={INPUT} aria-label={t('exp.titleLabel')} />
+          <input type="date" value={date} max={todayDubai()} onChange={(e) => setDate(e.target.value)} className={INPUT} aria-label={t('exp.date')} />
           <input value={supplier} onChange={(e) => setSupplier(e.target.value)} placeholder={t('exp.supplierPh')} className={INPUT} aria-label={t('exp.supplier')} />
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('exp.notePh')} className={cn(INPUT, 'sm:col-span-2')} aria-label={t('exp.note')} />
           <input ref={file} type="file" accept="image/*,application/pdf" className="hidden" onChange={(e) => setReceipt(e.target.files?.[0] ?? null)} />
@@ -147,7 +149,7 @@ function ExpenseRow({ v, r, canWrite }: { v: VehicleOverview; r: ExpenseRowT; ca
   const { company } = useCompany()
   const save = useSaveExpense(company.id, v.id!)
   const del = useDeleteExpense(v.id!)
-  const draft = (patch: Partial<{ title: string; amount: string }>) => ({
+  const draft = (patch: Partial<{ title: string; amount: string; expense_date: string }>) => ({
     title: r.title, category: r.category, amount: String(r.amount), expense_date: r.expense_date,
     supplier_name: r.supplier_name, description: r.description, ...patch,
   })
@@ -157,7 +159,13 @@ function ExpenseRow({ v, r, canWrite }: { v: VehicleOverview; r: ExpenseRowT; ca
       <div className="min-w-0 flex-1">
         <InlineText id={`exp-title-${r.id}`} label={t('exp.titleLabel')} value={r.title} disabled={!canWrite} className="font-semibold"
           onSave={(x) => (x ? save.mutateAsync({ id: r.id, draft: draft({ title: x }) }) : Promise.resolve())} />
-        <p className="text-[13.5px] text-ink-3">{[tr(t, `exp.cat.${r.category}`), r.supplier_name, fmtDate(r.expense_date).replace(/ \d{4}$/, ''), r.description].filter(Boolean).join(' · ')}</p>
+        <p className="flex flex-wrap items-center gap-x-1.5 text-[13.5px] text-ink-3">
+          <span>{[tr(t, `exp.cat.${r.category}`), r.supplier_name].filter(Boolean).join(' · ')} ·</span>
+          <input type="date" value={r.expense_date} max={todayDubai()} disabled={!canWrite} aria-label={t('exp.date')} data-testid="expense-date"
+            onChange={(e) => e.target.value && save.mutate({ id: r.id, draft: draft({ expense_date: e.target.value }) }, { onError: (er) => toast.error(friendlyError(er)) })}
+            className="rounded border-0 bg-transparent p-0 text-[13.5px] text-ink-3 hover:text-ink focus:text-ink" />
+          {r.description && <span>· {r.description}</span>}
+        </p>
       </div>
       {r.receipt_storage_path && (
         <button onClick={() => downloadFile(r.receipt_storage_path!, `receipt-${r.title}`)} className="text-[14px] font-medium text-info hover:underline">{t('exp.receipt')}</button>

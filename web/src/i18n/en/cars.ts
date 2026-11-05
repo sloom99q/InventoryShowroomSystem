@@ -9,6 +9,9 @@ const en = {
     deliveryNotSet: 'Delivery not set',
   },
   list: {
+    exportExcel: 'Export Excel',
+    exported_one: 'Exported {{count}} car',
+    exported_other: 'Exported {{count}} cars',
     title: 'Cars',
     archivedTitle: 'Archived cars',
     count_one: '{{count}} car',
@@ -97,6 +100,12 @@ const en = {
     openCar: 'Open the car',
   },
   car: {
+    chassisChecked: 'Checked against the documents',
+    chassisNotChecked: 'Not yet checked against the documents',
+    markChecked: 'Mark as checked',
+    undo: 'Undo',
+    checkedToast: 'Chassis marked as checked against the documents',
+    uncheckedToast: 'Chassis check removed',
     notFound: 'This car doesn’t exist any more.',
     archivedBanner: 'Archived on {{date}}. It’s hidden from the list; restore it from ⋯.',
     chassisLabel: 'Chassis number',
@@ -129,6 +138,12 @@ const en = {
     missingCount_other: '{{count}} missing',
   },
   journey: {
+    noteTitle: 'Note',
+    notedBy: 'by {{name}}',
+    noteAdded: 'Note added',
+    notePlaceholder: 'Add a note to the timeline, e.g. Customer called about the tint',
+    noteWhen: 'When',
+    addNote: 'Add note',
     where: 'Where is this car?',
     next: 'Move to {{stage}}',
     track: 'Stages',
@@ -211,6 +226,7 @@ const en = {
     newPh: 'e.g. Tow hook',
   },
   exp: {
+    date: 'Date',
     totalLabel: 'Total spent on this car',
     countLast_one: '{{count}} expense · last on {{date}}',
     countLast_other: '{{count}} expenses · last on {{date}}',

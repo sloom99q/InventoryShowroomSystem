@@ -84,7 +84,7 @@ export function useJourney(vehicleId: string) {
     queryKey: ['journey', vehicleId],
     queryFn: async () => {
       const { data, error } = await supabase.from('vehicle_events').select('*')
-        .eq('vehicle_id', vehicleId).eq('event_type', 'stage').order('event_at', { ascending: false }).order('created_at', { ascending: false })
+        .eq('vehicle_id', vehicleId).in('event_type', ['stage', 'note']).order('event_at', { ascending: false }).order('created_at', { ascending: false })
       if (error) throw error
       const ids = [...new Set(data.map((e) => e.created_by).filter(Boolean))] as string[]
       const names = new Map<string, string | null>()
